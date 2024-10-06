@@ -38,7 +38,7 @@ object TestActor {
             while (true) {
                 TestActor.a.handlers((sid, "B", "A")) = (op, pay) => { println("foooooooooo read"); Done }
                 Thread.sleep(1000)
-                TestActorB.sendMessage(sid, "B", "A", "foo", s"pay${i}")
+                TestActorB.sendMessage(sid, "B", "A", "foo", List(s"pay${i}"))
                 i += 1
             }
         }
@@ -65,11 +65,13 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
     // sid, self role (dst), peer role (src)
     val queues = collection.mutable.Map[(Session.Sid, Session.Role, Session.Role), ListBuffer[String]]()
-    //val preHandlers = collection.mutable.Map[Net.Liota, Session.Sid => Done.type]()
+    //val queues = collection.mutable.Map[(Session.Sid, Session.Role, Session.Role), ListBuffer[(String, List[Object])]]()
+    ////val preHandlers = collection.mutable.Map[Net.Liota, Session.Sid => Done.type]()
 
     // sid, self role, peer role
     val initHandlers = collection.mutable.Map[(Session.Sid, Session.Role), () => Done.type]()
     val handlers = collection.mutable.Map[(Session.Sid, Session.Role, Session.Role), (String, String) => Done.type]()  // (Op, Pay)  // TODO pay types
+    //val handlers = collection.mutable.Map[(Session.Sid, Session.Role, Session.Role), (String, List[Object]) => Done.type]()  // (Op, Pay)  // TODO pay types
 
     val initSync = collection.mutable.Map[Net.Liota, (collection.mutable.Map[Session.Role, Promise[Unit]], SocketChannel, Session.Sid => Done.type)]()
     //val initHelp = collection.mutable.Map[Session.Sid, Net.Liota]()
@@ -198,19 +200,26 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         debugPrintln(s"...ended: ${sid}[${r}]")
     }
 
-    // !!! deprecate
+    /*// !!! deprecate
     @throws[IOException]
     def sendMessage[T](sid: Session.Sid, dst: Session.Role, op: String, pay: T): Unit = {
         sendMessage(sid, dst, dst, op, pay)
-    }
+    }*/
 
     @throws[IOException]
     def sendMessage[T](sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: T): Unit = {
-        debugPrintln(s"Sockets: ${sockets}")
+    //def sendMessage[T <: Serializable](sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: List[T]): Unit = {
+            debugPrintln(s"Sockets: ${sockets}")
         debugPrintln(s"Sending message to ${sid}[${dst}]: ${op}(${pay})")
 
-        // !!! FIXME serialize pay (currently hardcoded String)
         write(this.sockets((sid, dst)), s"SEND_${sid._1}_${sid._2}_${src}_${dst}_${op}_${pay}")
+
+        /*// !!! FIXME HERE serialize pay (currently hardcoded String)
+        val bs = serialise((sid._1, sid._2, src, dst, op, pay))
+        val tmp = serialise1((sid._1, sid._2, src, dst, op, pay))
+        println("fooooooooo: " + deserialise1(tmp))
+        deserialise(bs)
+        write(this.sockets((sid, dst)), s"SEND_${bs}")*/
     }
 
     //val canRun = Promise[Unit]()
@@ -343,7 +352,12 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 val src = msg.substring(k + 1, l)
                 val rr = msg.substring(l + 1, ll)
                 val op = msg.substring(ll + 1, lll)
-                val pay = msg.substring(lll + 1)  // !!! FIXME deserialize pay (currently hardcoded String)
+                val pay = msg.substring(lll + 1)
+
+                /*// !!! FIXME HERE deserialize pay (currently hardcoded String)
+                val tuple = deserialise(msg.substring(i+1))
+                val (p: Session.Global, id: Int, src: Session.Role, rr: Session.Role, op: String, pay: List[Object]) = tuple
+                val sid = (p, id)*/
 
                 debugPrintln(s"Parsed session receive: sid=${sid}, src=${src}, rr=${rr}, op=${op}, pay=${pay}")
 
@@ -432,6 +446,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
             val msg = s"SERVER_${proto}_${r}_localhost_${port}_${i}"  // HERE factor out message types and parsing
             write(apSocket, msg)
+
             debugPrintln(s"Registered AP connected for READ: ${apSocket.getRemoteAddress()}")
 
         } catch {
@@ -549,15 +564,16 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         f()
     }
 
-    // deprecate
+    /*// deprecate
     def setHandler(sid: Session.Sid, r: Session.Role, f: (String, String) => Done.type): Unit = {
         this.handlers((sid, r, r)) = f
-    }
+    }*/
 
     // self = dst, peer = src
     def setHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, f: (String, String) => Done.type): Unit = {
+    //def setHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, f: (String, List[Object]) => Done.type): Unit = {
 
-        if (this.queues.contains((sid, self, peer))) {
+            if (this.queues.contains((sid, self, peer))) {
             val q = this.queues((sid, self, peer))
             if (q.nonEmpty) {
                 val h = q.head
@@ -565,6 +581,9 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 val split = h.split("__")
                 val op = split(0)
                 val pay = split(1)
+                /*val op = h._1
+                val pay = h._2*/
+
                 f(op, pay)
 
             } else {
@@ -575,19 +594,21 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         }
     }
 
-    // deprecate
+    /*// deprecate
     def dispatchHandler(sid: Session.Sid, r: Session.Role, op: String, pay: String): Unit = {
         val f = this.handlers(sid, r, r)
         this.handlers -= ((sid, r, r))
         f(op, pay)
-    }
+    }*/
 
     // self = dst, peer = src
     def dispatchHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, op: String, pay: String): Unit = {
+    //def dispatchHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, op: String, pay: List[Object]): Unit = {
 
-        if (!this.handlers.contains((sid, self, peer))) {
+            if (!this.handlers.contains((sid, self, peer))) {
             val q = this.queues.getOrElseUpdate((sid, self, peer), ListBuffer())
             q += s"${op}__${pay}"
+            //q += ((op, pay))
 
         } else {
             val f = this.handlers(sid, self, peer)
@@ -596,7 +617,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         }
     }
 
-    // self = dst, peer = src
+    /*// self = dst, peer = src
     def setHandlerFoo(sid: Session.Sid, self: Session.Role, peer: Session.Role, f: (String, String) => this.Foo): Unit = {
 
         if (this.queues.contains((sid, self, peer))) {
@@ -604,9 +625,11 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
             if (q.nonEmpty) {
                 val h = q.head
                 this.queues((sid, self, peer)) = q.tail
-                val split = h.split("__")
+                /*val split = h.split("__")
                 val op = split(0)
-                val pay = split(1)
+                val pay = split(1)*/
+                val op = h._1
+                val pay = h._2
                 f(op, pay)
 
             } else {
@@ -629,7 +652,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
             this.handlersFoo -= ((sid, self, peer))
             f(op, pay)
         }
-    }
+    }*/
 }
 
 /*object Helper {

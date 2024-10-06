@@ -1,9 +1,10 @@
 package ea.runtime
 
-import java.io.IOException
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException, ObjectInputStream, ObjectOutputStream}
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.{SelectionKey, Selector, ServerSocketChannel, SocketChannel}
+import java.nio.charset.StandardCharsets
 import java.util.ConcurrentModificationException
 import scala.collection.mutable.ListBuffer
 
@@ -256,6 +257,42 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
         client
     }
 
+    /*
+    //def serialise(value: Serializable): Array[Byte] = {
+    def serialise(value: Serializable): String = {
+        val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(stream)
+        oos.writeObject(value)
+        oos.close()
+        val bs = stream.toByteArray
+        new String(bs, StandardCharsets.UTF_8)
+    }
+
+    //def deserialise(bytes: Array[Byte]): Serializable = {
+    def deserialise(bs: String): Serializable = {
+        val bytes = bs.getBytes(StandardCharsets.UTF_8)
+        val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
+        val value = ois.readObject.asInstanceOf[Serializable]
+        ois.close()
+        value
+    }
+
+    def serialise1(value: Serializable): Array[Byte] = {
+        val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(stream)
+        oos.writeObject(value)
+        oos.close()
+        stream.toByteArray
+    }
+    */
+
+    def deserialise1(bytes: Array[Byte]): Serializable = {
+        val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
+        val value = ois.readObject.asInstanceOf[Serializable]
+        ois.close()
+        value
+    }
+
     @throws[IOException]
     def write(c: SocketChannel, pay: String): Unit = {
 
@@ -269,6 +306,11 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
         debugPrintln(s"...written to ${addr}: ${msg}")
     }
 
+    /*def write[T <: Serializable](c: SocketChannel, pay: List[T]): Unit = {
+        //pay.map(x => serialise(x)).fold("", (x, y) => x+y)
+        write(c, serialise(pay))
+    }*/
+
     type RemoteAddressString = String
     val buffers: collection.mutable.Map[RemoteAddressString, ByteBuffer] = collection.mutable.Map()
 
@@ -276,7 +318,7 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
     @throws[IOException]
     def read(c: SocketChannel): Seq[String] = {
         val k = c.getRemoteAddress().toString
-        val buffer = this.buffers.getOrElseUpdate(k, ByteBuffer.allocate(256))  // !!!
+        val buffer = this.buffers.getOrElseUpdate(k, ByteBuffer.allocate(2048))  // !!!
         val r = c.read(buffer)
         if (r == -1) {  // !!! CHECKME cf. above getRemoteAddress -- cf. getLocalAddress ?
             this.buffers -= k
