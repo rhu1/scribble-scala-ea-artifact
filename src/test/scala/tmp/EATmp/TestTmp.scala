@@ -1,9 +1,9 @@
 package tmp.EATmp
 
 import ea.runtime.{Actor, Done, Session}
-import tmp.EATmp.Proto1.{A1, ActorA}
+import tmp.EATmp.Proto01.{A1, ActorA}
 
-object TestGen01 {
+object TestProto01 {
 
     def main(args: Array[String]): Unit = {
         println("Hello")
@@ -14,7 +14,7 @@ object TestGen01 {
         FooA.spawn(); FooB.spawn()*/
 
         //val proto1 = new AP("Proto1", Set("A", "B"))
-        val p1 = new Proto1.Proto1
+        val p1 = new Proto01.Proto1
         p1.spawn(8888)
         Thread.sleep(1000)
 
@@ -39,7 +39,7 @@ object A extends Actor("MyA") with ActorA {
         registerA(7777, "localhost", 8888, DataA(), a1)  // !!! mutable data
     }
 
-    def a1(d: DataA, s: Proto1.A1): Done.type = {
+    def a1(d: DataA, s: Proto01.A1): Done.type = {
         //Done  // testing linearity
         //s.sendL1(s"abc")  // testing linearity
         finishAndClose(s.sendL1(s"abc"))
@@ -49,23 +49,23 @@ object A extends Actor("MyA") with ActorA {
 
 /* ... */
 
-object B extends Actor("MyB") with Proto1.ActorB {
+object B extends Actor("MyB") with Proto01.ActorB {
 
     def spawn(): Unit = {
         spawn(6666)
         registerB(6666, "localhost", 8888, DataB(), b1Init)  // !!! mutable data
     }
 
-    def b1Init(d: DataB, s: Proto1.B1Suspend): Done.type = {
+    def b1Init(d: DataB, s: Proto01.B1Suspend): Done.type = {
         //Done  // testing linearity
         s.suspend(d, b1)
         //s.suspend(b1)  // testing linearity
     }
 
-    def b1(d: DataB, s: Proto1.B1): Done.type = {
+    def b1(d: DataB, s: Proto01.B1): Done.type = {
         //Done  // testing linearity
         s match {
-            case Proto1.L1B(sid, x, s) =>
+            case Proto01.L1B(sid, x, s) =>
                 //Done  // testing linearity
                 finishAndClose(s)
         }
