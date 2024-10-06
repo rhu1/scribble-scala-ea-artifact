@@ -151,14 +151,16 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
             val keys = selector.selectedKeys.iterator
             while (keys.hasNext) {
 
-                // !!! concurrent modif? probably close? e.g., two sessions (e.g., Gen07), close in handler for one session closes all, but other session could still be in remaining keys (e.g., concurrent EOF?)
+                // !!! concurrent modif? probably close? e.g., two sessions (e.g., Gen07), close in handler for one session closes all, but other session could still be in remaining while-loop keys (e.g., concurrent EOF?)
                 // cf. CancelledKey
                 // FIXME close should be enqueued?
                 try {
                     val key = keys.next()
-
                     keys.remove()
-                    if (key.isAcceptable) {  // TODO CancelledKey exception (e.g., peer closed)
+
+                    // HERE TODO CancelledKey exception (e.g., peer closed)
+
+                    if (key.isAcceptable) {
                         handleAcceptAndRegister(selector, key)
                     }
                     if (key.isReadable) {
@@ -168,7 +170,8 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
                     case e: ConcurrentModificationException =>
                         println(debugToString("Caught..."))
                         e.printStackTrace()
-                        close()
+                        //close()
+                        enqueueForSelectLoop(() => close())
                         debugPrintln("Force stopped.")
                         return
                 }
