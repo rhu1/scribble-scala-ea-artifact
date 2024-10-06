@@ -2,9 +2,9 @@ package tmp.EATmp.ShopProto1
 
 import ea.runtime.{AP, Session}
 
-object Shop {
-	val name: String = "Shop"
+object ShopProto1 {
+	val name: String = "ShopProto1"
 	val roles: Seq[Session.Role] = Seq("C", "S", "P")
 }
 
-class Shop extends AP(Shop.name, Shop.roles.toSet)
+class ShopProto1 extends AP(ShopProto1.name, ShopProto1.roles.toSet)

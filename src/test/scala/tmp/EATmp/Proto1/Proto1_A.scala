@@ -1,6 +1,7 @@
-package tmp.EATmp.Proto01
+package tmp.EATmp.Proto1
 
 import ea.runtime.{Actor, Done, Session}
+import tmp.EATmp.Proto01.{A1, EndA}
 
 trait ActorA extends Actor {
 
@@ -14,7 +15,9 @@ case class A1(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
 
 	def sendL1(x: String): EndA = {
 		checkNotUsed()
-		actor.sendMessage(sid, "A", "B", "L1", x)
+		//val ser = actor.serializeString(x)
+		val ser = actor.serializeString(x)
+		actor.sendMessage(sid, "A", "B", "L1", ser)
 		EndA(sid, actor)
 	}
 }

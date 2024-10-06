@@ -13,7 +13,7 @@ object TestProto01 {
         FooA.spawn(); FooB.spawn()*/
 
         //val proto1 = new AP("Proto1", Set("A", "B"))
-        val p1 = new Proto1
+        val p1 = new Proto01
         p1.spawn(8888)
         Thread.sleep(1000)
 

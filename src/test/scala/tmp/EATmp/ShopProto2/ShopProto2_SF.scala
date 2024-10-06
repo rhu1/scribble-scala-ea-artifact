@@ -14,17 +14,19 @@ case class SF1Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendSta
 
 	def suspend[D <: Session.Data](d: D, f: (D, SF1) => Done.type): Done.type = {
 		checkNotUsed()
-		val g = (op: String, pay: Object) => {
+		val g = (op: String, pay: String) => {
 			var succ: Option[Session.ActorState[Actor]] = None
 			val msg: SF1 =
 			if (op == "AddItem") {
 				val s = SF1Suspend(sid, actor)
 				succ = Some(s)
-				AddItemSF(sid, pay.asInstanceOf[String], s)
+				val split = pay.split("::::")
+				AddItemSF(sid, actor.deserializeString(split(0)), s)
 			} else 	if (op == "RemoveItem") {
 				val s = SF1Suspend(sid, actor)
 				succ = Some(s)
-				RemoveItemSF(sid, pay.asInstanceOf[String], s)
+				val split = pay.split("::::")
+				RemoveItemSF(sid, actor.deserializeString(split(0)), s)
 			} else {
 				throw new RuntimeException(s"[ERROR] Unexpected op: ${op}(${pay})")
 			}

@@ -38,7 +38,8 @@ object TestActor {
             while (true) {
                 TestActor.a.handlers((sid, "B", "A")) = (op, pay) => { println("foooooooooo read"); Done }
                 Thread.sleep(1000)
-                TestActorB.sendMessage(sid, "B", "A", "foo", List(s"pay${i}"))
+                TestActorB.sendMessage(sid, "B", "A", "foo", s"pay${i}")
+                //TestActorB.sendMessage(sid, "B", "A", "foo", List(s"pay${i}"))
                 i += 1
             }
         }
@@ -207,8 +208,9 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
     }*/
 
     @throws[IOException]
-    def sendMessage[T](sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: T): Unit = {
+    //def sendMessage[T](sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: T): Unit = {
     //def sendMessage[T <: Serializable](sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: List[T]): Unit = {
+    def sendMessage(sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: String): Unit = {
             debugPrintln(s"Sockets: ${sockets}")
         debugPrintln(s"Sending message to ${sid}[${dst}]: ${op}(${pay})")
 
@@ -653,7 +655,25 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
             f(op, pay)
         }
     }*/
+
+    def serialize[T, D <: EADeserializer[T]](x: EASerializable[T, D]): String = x.toString
+    def serializeString(x: String): String = x
+    def serializeInt(x: Int): String = x.toString
+    def serializeBoolean(x: Boolean): String = x.toString
+    def deserialize[T, D <: EADeserializer[T]](x: String, d: D): T = d.deserialize(x)
+    def deserializeString(x: String): String = x
+    def deserializeInt(x: String): Int = x.toInt
+    def deserializeBoolean(x: String): Boolean = x.toBoolean
 }
+
+trait EASerializable[T, D <: EADeserializer[T]] {
+    def serialize(): String
+}
+
+trait EADeserializer[T] {
+    def deserialize(bs: String): T
+}
+
 
 /*object Helper {
 

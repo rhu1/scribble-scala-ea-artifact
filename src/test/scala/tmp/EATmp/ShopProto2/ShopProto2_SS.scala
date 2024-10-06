@@ -14,13 +14,15 @@ case class SS1(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
 
 	def sendAddItem(x1: String): SS1 = {
 		checkNotUsed()
-		actor.sendMessage(sid, "SS", "SF", "AddItem", x1)
+		val pay = actor.serializeString(x1)
+		actor.sendMessage(sid, "SS", "SF", "AddItem", pay)
 		SS1(sid, actor)
 	}
 
 	def sendRemoveItem(x1: String): SS1 = {
 		checkNotUsed()
-		actor.sendMessage(sid, "SS", "SF", "RemoveItem", x1)
+		val pay = actor.serializeString(x1)
+		actor.sendMessage(sid, "SS", "SF", "RemoveItem", pay)
 		SS1(sid, actor)
 	}
 }

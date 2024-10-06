@@ -9,7 +9,7 @@ object TestShop {
     def main(args: Array[String]): Unit = {
         println("Hello")
 
-        val proto1 = new Shop
+        val proto1 = new ShopProto1
         proto1.spawn(8888)
         val proto2 = new ShopProto2.ShopProto2
         proto2.spawn(9999)

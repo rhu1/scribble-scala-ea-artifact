@@ -1,4 +1,4 @@
-package tmp.EATmp.Proto01
+package tmp.EATmp.Proto1
 
 import ea.runtime.{AP, Session}
 
