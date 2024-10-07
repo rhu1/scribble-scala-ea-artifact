@@ -53,7 +53,7 @@ object A extends Actor("MyA") with ActorA {
     
     def a2(d: DataA, s: Proto10.A2): Done.type = {
         s match {
-            case Proto10.L2A(sid, s) =>
+            case Proto10.L2A(sid, role, s) =>
                 println(s"(${sid}) A received L2.")
                 Thread.sleep(1000)
                 println(s"(${sid}) A sending L1...")
@@ -87,7 +87,7 @@ object B extends Actor("MyB") with Proto10.ActorB {
 
     def b1(d: DataB, s: Proto10.B1): Done.type = {
         s match {
-            case Proto10.L1B(sid, s) =>
+            case Proto10.L1B(sid, role, s) =>
                 println(s"(${sid}) B received L1.")
                 println(s"(${sid}) B sending L2...")
                 s.sendL2().suspend(d, b1)

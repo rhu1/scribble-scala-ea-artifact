@@ -70,7 +70,7 @@ object B extends Actor("MyB") with ActorB {
     def b1(d: DataB, s: B1): Done.type = {
         //Done  // testing linearity
         s match {
-            case L1B(sid, x, s) =>
+            case L1B(sid, role, x, s) =>
                 //Done  // testing linearity
                 finishAndClose(s)
         }

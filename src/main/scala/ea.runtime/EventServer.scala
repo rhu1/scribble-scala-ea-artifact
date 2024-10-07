@@ -184,10 +184,10 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                                 handleReadAndRegister(selector, key)
                             }
                         } catch {
-                            case e: IOException =>
+                            case e: (IOException | LinearityException) =>
                                 key.cancel()
                                 debugPrintln("Swallowing...")
-                                new Exception(e).printStackTrace()
+                                if (this.debug) { new Exception(e).printStackTrace() }
                                 val opt = a match {
                                     case null => None
                                     case _ => Some(a.asInstanceOf[Session.Sid])
@@ -196,7 +196,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                             case e: Exception =>
                                 errPrintln(debugToString("Caught unexpected..."))
                                 new Exception(e).printStackTrace()
-                                errPrintln(debugToString("[ERROR] Force stopping..."))
+                                errPrintln(debugToString("Force stopping..."))
                                 enqueueClose()
                                 return
                         }

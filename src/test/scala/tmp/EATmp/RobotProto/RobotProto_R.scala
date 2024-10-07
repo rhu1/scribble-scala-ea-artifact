@@ -5,22 +5,22 @@ import ea.runtime.{Actor, Done, Session}
 trait ActorR extends Actor {
 
 	def registerR[D <: Session.Data](port: Int, apHost: String, apPort: Int, d: D, f: (D, R1) => Done.type): Unit = {
-		val g = (sid: Session.Sid) => R1(sid, this)
+		val g = (sid: Session.Sid) => R1(sid, "R", this)
 		enqueueRegisterForPeers(apHost, apPort, "RobotProto", "R", port, d, f, g, Set("D", "W"))
 	}
 }
 
-case class R1(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class R1(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendWantD(x1: String): R2 = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "R", "D", "WantD", pay)
-		R2(sid, actor)
+		R2(sid, "R", actor)
 	}
 }
 
-case class EndR(sid: Session.Sid, actor: Actor) extends Session.End[Actor] {
+case class EndR(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.End[Actor] {
 
 	override def finish(): Done.type = {
 		checkNotUsed()
@@ -30,17 +30,17 @@ case class EndR(sid: Session.Sid, actor: Actor) extends Session.End[Actor] {
 	}
 }
 
-case class R2(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class R2(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendWantW(x1: String): R3Suspend = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "R", "W", "WantW", pay)
-		R3Suspend(sid, actor)
+		R3Suspend(sid, "R", actor)
 	}
 }
 
-case class R3Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendState[Actor] {
+case class R3Suspend(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.SuspendState[Actor] {
 
 	def suspend[D <: Session.Data](d: D, f: (D, R3) => Done.type): Done.type = {
 		checkNotUsed()
@@ -48,15 +48,15 @@ case class R3Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendStat
 			var succ: Option[Session.ActorState[Actor]] = None
 			val msg: R3 =
 			if (op == "Busy") {
-				val s = EndR(sid, actor)
+				val s = EndR(sid, role, actor)
 				succ = Some(s)
 				val split = pay.split("::::")
-				BusyR(sid, actor.deserializeString(split(0)), s)
+				BusyR(sid, role, actor.deserializeString(split(0)), s)
 			} else 	if (op == "GoIn") {
-				val s = R4(sid, actor)
+				val s = R4(sid, role, actor)
 				succ = Some(s)
 				val split = pay.split("::::")
-				GoInR(sid, actor.deserializeString(split(0)), s)
+				GoInR(sid, role, actor.deserializeString(split(0)), s)
 			} else {
 				throw new RuntimeException(s"[ERROR] Unexpected op: ${op}(${pay})")
 			}
@@ -71,21 +71,21 @@ case class R3Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendStat
 
 sealed trait R3 extends Session.IState
 
-case class BusyR(sid: Session.Sid, x1: String, s: EndR) extends R3
+case class BusyR(sid: Session.Sid, role: Session.Role, x1: String, s: EndR) extends R3
 
-case class GoInR(sid: Session.Sid, x1: String, s: R4) extends R3
+case class GoInR(sid: Session.Sid, role: Session.Role, x1: String, s: R4) extends R3
 
-case class R4(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class R4(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendInside(x1: String): R5Suspend = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "R", "D", "Inside", pay)
-		R5Suspend(sid, actor)
+		R5Suspend(sid, "R", actor)
 	}
 }
 
-case class R5Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendState[Actor] {
+case class R5Suspend(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.SuspendState[Actor] {
 
 	def suspend[D <: Session.Data](d: D, f: (D, R5) => Done.type): Done.type = {
 		checkNotUsed()
@@ -93,10 +93,10 @@ case class R5Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendStat
 			var succ: Option[Session.ActorState[Actor]] = None
 			val msg: R5 =
 			if (op == "Delivered") {
-				val s = R6(sid, actor)
+				val s = R6(sid, role, actor)
 				succ = Some(s)
 				val split = pay.split("::::")
-				DeliveredR(sid, actor.deserializeString(split(0)), s)
+				DeliveredR(sid, role, actor.deserializeString(split(0)), s)
 			} else {
 				throw new RuntimeException(s"[ERROR] Unexpected op: ${op}(${pay})")
 			}
@@ -111,29 +111,29 @@ case class R5Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendStat
 
 sealed trait R5 extends Session.IState
 
-case class DeliveredR(sid: Session.Sid, x1: String, s: R6) extends R5
+case class DeliveredR(sid: Session.Sid, role: Session.Role, x1: String, s: R6) extends R5
 
-case class R6(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class R6(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendPartTaken(x1: String): R7 = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "R", "W", "PartTaken", pay)
-		R7(sid, actor)
+		R7(sid, "R", actor)
 	}
 }
 
-case class R7(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class R7(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendWantLeave(x1: String): R8Suspend = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "R", "D", "WantLeave", pay)
-		R8Suspend(sid, actor)
+		R8Suspend(sid, "R", actor)
 	}
 }
 
-case class R8Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendState[Actor] {
+case class R8Suspend(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.SuspendState[Actor] {
 
 	def suspend[D <: Session.Data](d: D, f: (D, R8) => Done.type): Done.type = {
 		checkNotUsed()
@@ -141,10 +141,10 @@ case class R8Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendStat
 			var succ: Option[Session.ActorState[Actor]] = None
 			val msg: R8 =
 			if (op == "GoOut") {
-				val s = R9(sid, actor)
+				val s = R9(sid, role, actor)
 				succ = Some(s)
 				val split = pay.split("::::")
-				GoOutR(sid, actor.deserializeString(split(0)), s)
+				GoOutR(sid, role, actor.deserializeString(split(0)), s)
 			} else {
 				throw new RuntimeException(s"[ERROR] Unexpected op: ${op}(${pay})")
 			}
@@ -159,14 +159,14 @@ case class R8Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendStat
 
 sealed trait R8 extends Session.IState
 
-case class GoOutR(sid: Session.Sid, x1: String, s: R9) extends R8
+case class GoOutR(sid: Session.Sid, role: Session.Role, x1: String, s: R9) extends R8
 
-case class R9(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class R9(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendOutside(x1: String): EndR = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "R", "D", "Outside", pay)
-		EndR(sid, actor)
+		EndR(sid, "R", actor)
 	}
 }

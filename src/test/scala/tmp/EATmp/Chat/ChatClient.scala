@@ -94,10 +94,10 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
     def c3(d: DataC, s: ChatProto1.C3): Done.type = {
         val (apPort, done) =
             s match {
-                case ChatProto1.CreateRoomSuccessC(sid, x, s) =>
+                case ChatProto1.CreateRoomSuccessC(sid, role, x, s) =>
                     println(s"[${name}] create")
                     (x.toInt, s.sendBye("create").finish())
-                case ChatProto1.RoomExistsC(sid, x, s) =>
+                case ChatProto1.RoomExistsC(sid, role, x, s) =>
                     println(s"[${name}] exists")
                     (x.toInt, s.sendBye("exists").finish())
             }
@@ -120,10 +120,10 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
 
     def c3_1(d: DataC, s: ChatProto3.C1): Done.type = {
         s match {
-            case ChatProto3.IncomingChatMessageC(sid, x, s) =>
+            case ChatProto3.IncomingChatMessageC(sid, role, x, s) =>
                 println(s"[${name}] received: ${x}")
                 s.suspend(d, c3_1)
-            case ChatProto3.ByeC(sid, x, s) =>
+            case ChatProto3.ByeC(sid, role, x, s) =>
                 if (!this.out.isUsed) {
                     //finishAndClose(this.out.get)  // !!! cannot end  // normally already ended by app logic (LeaveRoom), but maybe crash
                 }
@@ -146,7 +146,7 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
         /*val done = Session.cache(s1,
             (sid: Session.Sid, a: Actor) => proto2.C1(sid, a),
             (a: Some[proto2.C1]) => this.out = a)*/
-        val (a, done) = Session.freeze(s, (sid: Session.Sid, a: Actor) => ChatProto2.C1(sid, a))
+        val (a, done) = Session.freeze(s, (sid: Session.Sid, role: Session.Role, a: Actor) => ChatProto2.C1(sid, role, a))
         this.out = a
         done
     }

@@ -1,7 +1,6 @@
 package tmp.EATmp.Proto09
 
 import ea.runtime.{Actor, Done, Session}
-import tmp.EATmp.Proto09.{A1, ActorA}
 import tmp.EATmp.*
 
 import java.net.SocketAddress
@@ -43,7 +42,7 @@ object A extends Actor("MyA") with ActorA {
     
     def a2(d: DataA, s: Proto09.A2): Done.type = {
         s match {
-            case Proto09.L2A(sid, x1, x2, s) =>
+            case Proto09.L2A(sid, role, x1, x2, s) =>
                 finishAndClose(s)
         }
     }
@@ -69,7 +68,7 @@ object B extends Actor("MyB") with Proto09.ActorB {
 
     def b1(d: DataB, s: Proto09.B1): Done.type = {
         s match {
-            case Proto09.L1B(sid, s) =>
+            case Proto09.L1B(sid, role, s) =>
                 finishAndClose(s.sendL2(42, true))
         }
     }

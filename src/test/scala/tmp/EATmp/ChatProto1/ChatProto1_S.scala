@@ -5,12 +5,12 @@ import ea.runtime.{Actor, Done, Session}
 trait ActorS extends Actor {
 
 	def registerS[D <: Session.Data](port: Int, apHost: String, apPort: Int, d: D, f: (D, S1Suspend) => Done.type): Unit = {
-		val g = (sid: Session.Sid) => S1Suspend(sid, this)
+		val g = (sid: Session.Sid) => S1Suspend(sid, "S", this)
 		enqueueRegisterForPeers(apHost, apPort, "ChatProto1", "S", port, d, f, g, Set("C"))
 	}
 }
 
-case class S1Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendState[Actor] {
+case class S1Suspend(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.SuspendState[Actor] {
 
 	def suspend[D <: Session.Data](d: D, f: (D, S1) => Done.type): Done.type = {
 		checkNotUsed()
@@ -18,25 +18,25 @@ case class S1Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendStat
 			var succ: Option[Session.ActorState[Actor]] = None
 			val msg: S1 =
 			if (op == "LookupRoom") {
-				val s = S2(sid, actor)
+				val s = S2(sid, role, actor)
 				succ = Some(s)
 				val split = pay.split("::::")
-				LookupRoomS(sid, actor.deserializeString(split(0)), s)
+				LookupRoomS(sid, role, actor.deserializeString(split(0)), s)
 			} else 	if (op == "CreateRoom") {
-				val s = S3(sid, actor)
+				val s = S3(sid, role, actor)
 				succ = Some(s)
 				val split = pay.split("::::")
-				CreateRoomS(sid, actor.deserializeString(split(0)), s)
+				CreateRoomS(sid, role, actor.deserializeString(split(0)), s)
 			} else 	if (op == "ListRooms") {
-				val s = S4(sid, actor)
+				val s = S4(sid, role, actor)
 				succ = Some(s)
 				val split = pay.split("::::")
-				ListRoomsS(sid, actor.deserializeString(split(0)), s)
+				ListRoomsS(sid, role, actor.deserializeString(split(0)), s)
 			} else 	if (op == "Bye") {
-				val s = EndS(sid, actor)
+				val s = EndS(sid, role, actor)
 				succ = Some(s)
 				val split = pay.split("::::")
-				ByeS(sid, actor.deserializeString(split(0)), s)
+				ByeS(sid, role, actor.deserializeString(split(0)), s)
 			} else {
 				throw new RuntimeException(s"[ERROR] Unexpected op: ${op}(${pay})")
 			}
@@ -51,15 +51,15 @@ case class S1Suspend(sid: Session.Sid, actor: Actor) extends Session.SuspendStat
 
 sealed trait S1 extends Session.IState
 
-case class LookupRoomS(sid: Session.Sid, x1: String, s: S2) extends S1
+case class LookupRoomS(sid: Session.Sid, role: Session.Role, x1: String, s: S2) extends S1
 
-case class CreateRoomS(sid: Session.Sid, x1: String, s: S3) extends S1
+case class CreateRoomS(sid: Session.Sid, role: Session.Role, x1: String, s: S3) extends S1
 
-case class ListRoomsS(sid: Session.Sid, x1: String, s: S4) extends S1
+case class ListRoomsS(sid: Session.Sid, role: Session.Role, x1: String, s: S4) extends S1
 
-case class ByeS(sid: Session.Sid, x1: String, s: EndS) extends S1
+case class ByeS(sid: Session.Sid, role: Session.Role, x1: String, s: EndS) extends S1
 
-case class EndS(sid: Session.Sid, actor: Actor) extends Session.End[Actor] {
+case class EndS(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.End[Actor] {
 
 	override def finish(): Done.type = {
 		checkNotUsed()
@@ -69,46 +69,46 @@ case class EndS(sid: Session.Sid, actor: Actor) extends Session.End[Actor] {
 	}
 }
 
-case class S2(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class S2(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendRoomPID(x1: String): S1Suspend = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "S", "C", "RoomPID", pay)
-		S1Suspend(sid, actor)
+		S1Suspend(sid, "S", actor)
 	}
 
 	def sendRoomNotFound(x1: String): S1Suspend = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "S", "C", "RoomNotFound", pay)
-		S1Suspend(sid, actor)
+		S1Suspend(sid, "S", actor)
 	}
 }
 
-case class S3(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class S3(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendCreateRoomSuccess(x1: String): S1Suspend = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "S", "C", "CreateRoomSuccess", pay)
-		S1Suspend(sid, actor)
+		S1Suspend(sid, "S", actor)
 	}
 
 	def sendRoomExists(x1: String): S1Suspend = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "S", "C", "RoomExists", pay)
-		S1Suspend(sid, actor)
+		S1Suspend(sid, "S", actor)
 	}
 }
 
-case class S4(sid: Session.Sid, actor: Actor) extends Session.OState[Actor] {
+case class S4(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
 	def sendRoomList(x1: String): S1Suspend = {
 		checkNotUsed()
 		val pay = actor.serializeString(x1)
 		actor.sendMessage(sid, "S", "C", "RoomList", pay)
-		S1Suspend(sid, actor)
+		S1Suspend(sid, "S", actor)
 	}
 }

@@ -1,5 +1,7 @@
 package ea.runtime
 
+import java.io.IOException
+
 object Done
 
 object Session {
@@ -21,7 +23,7 @@ object Session {
         //def checkNotUsed()(implicit debuggable): Unit = {
         def checkNotUsed(): Unit = {
             if (this.isUsed) {
-                throw new RuntimeException("Linearity violation, already used.")
+                throw new LinearityException("Linearity violation, already used.")
             }
             this.isUsed = true
         }
@@ -29,13 +31,14 @@ object Session {
         //def checkUsed()(implicit debuggable): Unit = {
         def checkUsed(): Unit = {
             if (!this.isUsed) {
-                throw new RuntimeException("Linearity violation, not used.")
+                throw new LinearityException("Linearity violation, not used.")
             }
         }
     }
 
     trait State {
         val sid: Sid
+        val role: Role
     }
 
     trait LinState extends State with DynLin
@@ -49,7 +52,7 @@ object Session {
 
         override def checkNotUsed(): Unit = {
             if (this.isUsed) {
-                throw new RuntimeException(s"${actor.debugToString("Linearity violation, already used.")}")
+                throw new LinearityException(s"${actor.debugToString("Linearity violation, already used.")}")
                 //actor.close()
             }
             this.isUsed = true
@@ -57,7 +60,7 @@ object Session {
 
         override def checkUsed(): Unit = {
             if (!this.isUsed) {
-                throw new RuntimeException(s"${actor.debugToString("Linearity violation, not used.")}")
+                throw new LinearityException(s"${actor.debugToString("Linearity violation, not used.")}")
                 //actor.close()
             }
         }
@@ -96,18 +99,37 @@ object Session {
     // TODO generate f copier inside API (e.g., copy constructor -- cf. case class)
     //def weaken[A <: Actor, S <: Session.OState[A]]
     def freeze[A <: Actor, S <: Session.OState[A]]
-            (s: S, f: (Session.Sid, A) => S): (LinSome[S], Done.type) = {
+            (s: S, f: (Session.Sid, Session.Role, A) => S): (LinSome[S], Done.type) = {
         s.isUsed = true
-        (LinSome(f(s.sid, s.actor)), Done)  // main point: f copy is not done
+        (LinSome(f(s.sid, s.role, s.actor)), Done)  // main point: f copy is not done
     }
 
     def become[D, S <: ActorState[Actor]]
     //def become[D, A <: Actor, S <: ActorState[A]]  // FIXME probably due to Actor hardcoded in places
             (d: D, a: LinSome[S], f: (D, S) => Done.type): Done.type = {
-        val s = a.get  // at most once get
-        val done = f(d, s)
-        s.checkUsed()
-        done
+        val hack = a.hackGet
+        try {
+            val s = a.get // at most once get
+            val done = f(d, s)
+            s.checkUsed()
+            done
+        } catch {
+            case e: (IOException | LinearityException) =>
+                hack.actor.end(hack.sid, hack.role)
+                hack.actor.debugPrintln(s"become ${hack.sid}(${hack.role}) swallowing...")
+                new Exception(e).printStackTrace()
+                /*val opt = Some(s.sid)
+                s.actor.handleException(addr, opt)*/
+                Done  // FIXME ?
+            case e: Exception =>
+                hack.actor.errPrintln(hack.actor.debugToString("Caught unexpected..."))
+                new Exception(e).printStackTrace()
+                hack.actor.errPrintln(hack.actor.debugToString("Force stopping..."))
+                hack.actor.enqueueClose()
+                Done  // FIXME ?
+        } finally {
+            hack.isUsed = true
+        }
     }
 
 
@@ -134,9 +156,12 @@ object Session {
             this.isUsed = true
             t
         }
+        def hackGet: T = this.t  // FIXME need sid/role for error reporting
     }
 
 }
+
+class LinearityException(msg: String = null, cause: Throwable = null) extends RuntimeException
 
 //class SessionException(msg: String = null, cause: Throwable = null) extends Exception
 

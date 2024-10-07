@@ -49,10 +49,10 @@ class R(pid: String, val port: Net.Port) extends Actor(pid) with ActorR {
 
     def r3(d: DataR, s: R3): Done.type = {
         s match {
-            case BusyR(sid, x: String, s) =>
+            case BusyR(sid, role, x: String, s) =>
                 println(s"${pid} Denied.")
                 finishAndClose(s)
-            case GoInR(sid, x: String, s) =>
+            case GoInR(sid, role, x: String, s) =>
                 println(s"${pid} Entered...")
                 s.sendInside("inside")
                     .suspend(d, r5)
@@ -61,7 +61,7 @@ class R(pid: String, val port: Net.Port) extends Actor(pid) with ActorR {
 
     def r5(d: DataR, s: R5): Done.type = {
         s match {
-            case DeliveredR(sid, x: String, s) =>
+            case DeliveredR(sid, role, x: String, s) =>
                 Thread.sleep(3000)
                 s.sendPartTaken("taken_")
                     .sendWantLeave("leave")
@@ -71,7 +71,7 @@ class R(pid: String, val port: Net.Port) extends Actor(pid) with ActorR {
 
     def r8(d: DataR, s: R8): Done.type = {
         s match {
-            case GoOutR(sid, x: String, s) =>
+            case GoOutR(sid, role, x: String, s) =>
                 println(s"...${pid} exited.")
                 finishAndClose(s.sendOutside("outside"))
         }
@@ -102,7 +102,7 @@ class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extend
 
     def d1(d: DataD, s: D1): Done.type = {
         s match {
-            case WantDD(sid, x: String, s) =>
+            case WantDD(sid, role, x: String, s) =>
                 if (this.isBusy) {
                     //finishAndClose(s.sendBusy("busy").sendCancel("cancel"))
                     s.sendBusy("busy").sendCancel("cancel").finish()
@@ -117,13 +117,13 @@ class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extend
 
     def d5(d: DataD, s: D5): Done.type = {
         s match {
-            case InsideD(sid, x: String, s) => s.suspend(d, d6)
+            case InsideD(sid, role, x: String, s) => s.suspend(d, d6)
         }
     }
 
     def d6(d: DataD, s: D6): Done.type = {
         s match {
-            case PreparedD(sid, x: String, s) =>
+            case PreparedD(sid, role, x: String, s) =>
                 s.sendDeliver("deliver")
                     .suspend(d, d8)
         }
@@ -131,7 +131,7 @@ class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extend
 
     def d8(d: DataD, s: D8): Done.type = {
         s match {
-            case WantLeaveD(sid, x: String, s) =>
+            case WantLeaveD(sid, role, x: String, s) =>
                 s.sendGoOut("exit")
                     .suspend(d, d10)
         }
@@ -139,7 +139,7 @@ class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extend
 
     def d10(d: DataD, s: D10): Done.type = {
         s match {
-            case OutsideD(sid, x: String, s) =>
+            case OutsideD(sid, role, x: String, s) =>
                 this.isBusy = false
                 println(s"${pid} not busy.")
                 s.suspend(d, d11)
@@ -148,7 +148,7 @@ class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extend
 
     def d11(d: DataD, s: D11): Done.type = {
         s match {
-            case TableIdleD(sid, x: String, s) =>  // XXX may arrive before d10 fired, so TableIdleD handler not ready yet
+            case TableIdleD(sid, role, x: String, s) =>  // XXX may arrive before d10 fired, so TableIdleD handler not ready yet
                 //finishAndClose(s)
                 s.finish()
         }
@@ -180,30 +180,30 @@ object W extends Actor("Warehouse") with ActorW {
 
     def w1(d: DataW, s: W1): Done.type = {
         s match {
-            case WantWW(sid, x: String, s) => s.suspend(d, w2)
+            case WantWW(sid, role, x: String, s) => s.suspend(d, w2)
         }
     }
 
     def w2(d: DataW, s: W2): Done.type = {
         s match {
-            case CancelW(sid, x: String, s) =>
+            case CancelW(sid, role, x: String, s) =>
                 //finishAndClose(s)
                 s.finish()
-            case PrepareW(sid, x: String, s) =>
+            case PrepareW(sid, role, x: String, s) =>
                 s.sendPrepared("ready").suspend(d, w4)
         }
     }
 
     def w4(d: DataW, s: W4): Done.type = {
         s match {
-            case DeliverW(sid, x: String, s) =>
+            case DeliverW(sid, role, x: String, s) =>
                 s.sendDelivered("ready").suspend(d, w6)
         }
     }
 
     def w6(d: DataW, s: W6): Done.type = {
         s match {
-            case PartTakenW(sid, x: String, s) =>
+            case PartTakenW(sid, role, x: String, s) =>
                 //finishAndClose(s.sendTableIdle("idle"))
                 s.sendTableIdle("idle").finish()
         }

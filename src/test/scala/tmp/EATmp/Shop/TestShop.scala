@@ -52,7 +52,7 @@ object C extends Actor("Customer") with ActorC {
 
     def c2(d: DataC, s: C2): Done.type = {
         s match {
-            case ItemsC(sid, x, s) =>
+            case ItemsC(sid, role, x, s) =>
                 d.ids ++= x.split("::")
                 d.tmp ++= x.split("::")
                 c3(d, s)
@@ -72,21 +72,21 @@ object C extends Actor("Customer") with ActorC {
 
     def c4(d: DataC, s: C4): Done.type = {
         s match {
-            case ItemInfoC(sid, x, s) => c3(d, s)
+            case ItemInfoC(sid, role, x, s) => c3(d, s)
         }
     }
 
     def c5(d: DataC, s: C5): Done.type = {
         s match {
-            case ProcessingC(sid, x, s) => s.suspend(d, c6)
-            case OutOfStockC(sid, x, s) => c3(d, s)
+            case ProcessingC(sid, role, x, s) => s.suspend(d, c6)
+            case OutOfStockC(sid, role, x, s) => c3(d, s)
         }
     }
 
     def c6(d: DataC, s: C6): Done.type = {
         s match {
-            case OKcC(sid, x, s) => c3(d, s)
-            case DeclinedcC(sid, x, s) => c3(d, s)
+            case OKcC(sid, role, x, s) => c3(d, s)
+            case DeclinedcC(sid, role, x, s) => c3(d, s)
         }
     }
 
@@ -128,7 +128,7 @@ object S extends Actor("Shop") with SS {
 
     def ss1Cache(d: DataS, s: ShopProto2.SS1): Done.type = {
         //val done = Session.cache(s, (sid: Session.Sid, a: Actor) => SS1(sid, a), (a: Some[SS1]) => d.ss1 = a)  // s.cache((a: Some[SS1]) => d.ss1 = a)
-        val (a, done) = Session.freeze(s, (sid: Session.Sid, a: Actor) => ShopProto2.SS1(sid, a))
+        val (a, done) = Session.freeze(s, (sid: Session.Sid, role: Session.Role, a: Actor) => ShopProto2.SS1(sid, role, a))
         d.ss1 = a
         registerS(this.port, "localhost", 8888, d, s1suspend)
         done
@@ -159,7 +159,7 @@ object S extends Actor("Shop") with SS {
             case s: S1 =>
                 println("S1")
                 s match {
-                    case ReqItemsS(sid, x, s) =>
+                    case ReqItemsS(sid, role, x, s) =>
                         s.sendItems(d.summary())
                          //.suspend(d, s3)
                          .suspend(d, custReqHandler[S3])
@@ -167,12 +167,12 @@ object S extends Actor("Shop") with SS {
             case s: S3 =>
                 println("S3")
                 s match {
-                    case GetItemInfoS(sid, x, s) =>
+                    case GetItemInfoS(sid, role, x, s) =>
                         val info = d.stock(x)
                         val pay = s"${info._1}@${info._2}"
                         //s.sendItemInfo(pay).suspend(d, s3)
                         s.sendItemInfo(pay).suspend(d, custReqHandler[S3])
-                    case CheckoutS(sid, x, s) =>
+                    case CheckoutS(sid, role, x, s) =>
                         if (d.inStock(x)) {
                             val pay = s"${d.cost(x, 1)}"
                             s.sendProcessing(s"Processing${x}")
@@ -208,8 +208,8 @@ object S extends Actor("Shop") with SS {
 
     def paymentResponseHandler(d: DataS, s: S7): Done.type = {
         s match {
-            case OKS(sid, x, s) => s.sendOKc("delivery date").suspend(d, s3)
-            case DeclinedS(sid, x, s) => s.sendDeclinedc("insufficient funds").suspend(d, s3)
+            case OKS(sid, role, x, s) => s.sendOKc("delivery date").suspend(d, s3)
+            case DeclinedS(sid, role, x, s) => s.sendDeclinedc("insufficient funds").suspend(d, s3)
         }
     }
 
@@ -238,8 +238,8 @@ object SF extends Actor("Staff") with ShopProto2.ActorSF {
 
     def sf1(d: DataSF, s: ShopProto2.SF1): Done.type = {
         s match {
-            case ShopProto2.AddItemSF(sid, x, s) => s.suspend(d, sf1)
-            case ShopProto2.RemoveItemSF(sid, x, s) => s.suspend(d, sf1)
+            case ShopProto2.AddItemSF(sid, role, x, s) => s.suspend(d, sf1)
+            case ShopProto2.RemoveItemSF(sid, role, x, s) => s.suspend(d, sf1)
         }
     }
 
@@ -268,7 +268,7 @@ object P extends Actor("PaymentProcessor") with ActorP {
 
     def p1(d: DataP, s: P1): Done.type = {
         s match {
-            case BuyP(sid, x, s) =>
+            case BuyP(sid, role, x, s) =>
                 if (true) {
                     s.sendOK("()").suspend(d, p1)
                 } else {

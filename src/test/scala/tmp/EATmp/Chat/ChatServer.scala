@@ -58,7 +58,7 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
 
     def s1(d: DataS, s: ChatProto1.S1): Done.type = {
         s match {
-            case ChatProto1.LookupRoomS(sid, x, s) =>
+            case ChatProto1.LookupRoomS(sid, role, x, s) =>
                 val pid = x
                 if (d.rooms.contains(pid)) {
                     val apPort = d.rooms(pid).toString
@@ -66,7 +66,7 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
                 } else {
                     s.sendRoomNotFound(pid).suspend(d, s1)
                 }
-            case ChatProto1.CreateRoomS(sid, x, s) =>
+            case ChatProto1.CreateRoomS(sid, role, x, s) =>
                 val pid = x
                 if (d.rooms.contains(pid)) {
                     val apPort = d.rooms(pid).toString
@@ -84,14 +84,15 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
 
                     val rPort = d.nextRoomPort()
                     val room = new ChatRoom(pid, rPort, apPort)
+                    //room.debug = true
                     room.spawn()
 
                     s.sendCreateRoomSuccess(s"${apPort.toString}").suspend(d, s1)
                 }
-            case ChatProto1.ListRoomsS(sid, x, s) =>
+            case ChatProto1.ListRoomsS(sid, role, x, s) =>
                 val list = d.rooms.keySet.mkString("::")
                 s.sendRoomList(list).suspend(d, s1)
-            case ChatProto1.ByeS(sid, x, s) =>
+            case ChatProto1.ByeS(sid, role, x, s) =>
                 //finishAndClose(s)  // XXX
                 s.finish()
         }

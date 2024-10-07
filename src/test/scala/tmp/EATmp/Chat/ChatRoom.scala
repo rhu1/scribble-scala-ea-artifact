@@ -1,5 +1,6 @@
 package tmp.EATmp.Chat
 
+import java.io.IOException
 import ea.runtime.{Actor, Done, Net, Session}
 import tmp.EATmp.{ChatProto2, ChatProto3}
 
@@ -59,7 +60,7 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
         /*val done = Session.cache(s,
             (sid: Session.Sid, a: Actor) => proto3.R1(sid, a),
             (a: Some[proto3.R1]) => d.out += (a.get.sid -> a))  // !!! get*/
-        val (a, done) = Session.freeze(s, (sid: Session.Sid, a: Actor) => ChatProto3.R1(sid, a))
+        val (a, done) = Session.freeze(s, (sid: Session.Sid, role: Session.Role, a: Actor) => ChatProto3.R1(sid, role, a))
         d.out += (s.sid -> a)  // !!! overwrite "used"
         // !!! rename 2x registerR in API
         registerR(this.port, "localhost", apPort, d, r2_1suspend)  // ChatProto2.regsiterR
@@ -74,7 +75,7 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
 
     def r2_1(d: DataR, s: ChatProto2.R1): Done.type = {
         s match {
-            case ChatProto2.OutgoingChatMessageR(sid, x, s) =>
+            case ChatProto2.OutgoingChatMessageR(sid, role, x, s) =>
                 println(s"[${name}] received: ${x}")
                 d.log += x
                 d.out.keySet.foreach(x =>  // toList for copy? or keySet already a copy?
@@ -85,13 +86,14 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
                     }
                 )
                 s.suspend(d, r2_1)
-            case ChatProto2.LeaveRoomR(sid, x, s) =>
+            case ChatProto2.LeaveRoomR(sid, role, x, s) =>
                 //d.out -= sid  // !!! send BYE  // XXX wrong sid  // TODO use d to pair up sids
                 //finishAndClose(s)
                 s.finish()
         }
     }
 
+    @throws[IOException]
     def bc(d: DataR, s: ChatProto3.R1): Done.type = {
         val msg = s"${d.log.last}"
         println(s"[${name}] sending: ${msg}")
@@ -100,7 +102,7 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
             (a: Some[proto3.R1]) => d.out += (a.get.sid -> a))  // !!! get*/
         val (a, done) = Session.freeze(
             s.sendIncomingChatMessage(msg),
-            (sid: Session.Sid, a: Actor) => ChatProto3.R1(sid, a))
+            (sid: Session.Sid, role: Session.Role, a: Actor) => ChatProto3.R1(sid, role, a))  // copy constructor (consume linear)
 
         // CHECKME concurrent modif with d.out.foreach?
         d.out += (s.sid -> a)  // !!! overwrite "used"
