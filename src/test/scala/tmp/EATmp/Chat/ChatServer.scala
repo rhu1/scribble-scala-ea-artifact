@@ -18,7 +18,7 @@ object TestChatServer {
         ap1.spawn(9997)
 
         val server = new ChatServer("Server", 8888)
-        server.debug = true
+        //server.debug = true
         server.spawn()
     }
 }
