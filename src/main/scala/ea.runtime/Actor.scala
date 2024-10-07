@@ -214,6 +214,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
             debugPrintln(s"Sockets: ${sockets}")
         debugPrintln(s"Sending message to ${sid}[${dst}]: ${op}(${pay})")
 
+        // FIXME HERE IOException
         write(this.sockets((sid, dst)), s"SEND_${sid._1}_${sid._2}_${src}_${dst}_${op}_${pay}")
 
         /*// !!! FIXME HERE serialize pay (currently hardcoded String)

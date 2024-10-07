@@ -167,6 +167,9 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
                         handleReadAndRegister(selector, key)
                     }
                 } catch {
+
+                    // HERE SocketException from handleRead
+
                     case e: ConcurrentModificationException =>
                         println(debugToString("Caught..."))
                         e.printStackTrace()
