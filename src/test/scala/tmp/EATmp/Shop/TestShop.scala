@@ -151,7 +151,7 @@ object S extends Actor("Shop") with SS {
     def custReqHandler[T: S1orS3](d: DataS, s: T): Done.type = {
         s match {
             case s: S1 =>
-                //println("S1")
+                println("S1")
                 s match {
                     case ReqItemsS(sid, x, s) =>
                         s.sendItems(d.summary())
@@ -159,7 +159,7 @@ object S extends Actor("Shop") with SS {
                          .suspend(d, custReqHandler[S3])
                 }
             case s: S3 =>
-                //println("S3")
+                println("S3")
                 s match {
                     case GetItemInfoS(sid, x, s) =>
                         val info = d.stock(x)

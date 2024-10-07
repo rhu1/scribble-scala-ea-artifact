@@ -158,7 +158,7 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
                     val key = keys.next()
                     keys.remove()
 
-                    // HERE TODO CancelledKey exception (e.g., peer closed)
+                    // HERE TODO CancelledKey exception (e.g., peer closed) -- e.g., TestRobot
 
                     if (key.isAcceptable) {
                         handleAcceptAndRegister(selector, key)
