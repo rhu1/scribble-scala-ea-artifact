@@ -478,11 +478,12 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 return
             }
             val apSocket = opt.get*/
-            val apSocket = connect(apHost, apPort)
+            /*val apSocket = connect(apHost, apPort)
             ////val apSocket = SocketChannel.open(new InetSocketAddress(apHost, apPort))
             ////apSocket.configureBlocking(false)
             //apSocket.register(this.fSelector.get, SelectionKey.OP_READ)
-            registerWithSelector(apSocket, SelectionKey.OP_READ)
+            registerWithSelector(apSocket, SelectionKey.OP_READ)*/
+            val apSocket = connectAndRegister(apHost, apPort).get
 
             debugPrintln(s"Connected AP: ${apSocket.getLocalAddress} -> ${apSocket.getRemoteAddress}")
 

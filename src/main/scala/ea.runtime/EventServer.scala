@@ -1,6 +1,6 @@
 package ea.runtime
 
-import java.io.{ByteArrayInputStream, IOException, ObjectInputStream}
+import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.{SelectionKey, Selector, ServerSocketChannel, SocketChannel}
@@ -59,9 +59,6 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     private var fServerSocket: Option[ServerSocketChannel] = None
     private var fSelector: Option[Selector] = None
 
-    // ...only for registerForPeers from user clients (cf. events from event loop)
-    private[runtime] def registerWithSelector(c: SocketChannel, k: Int): Unit = c.register(this.fSelector.get, k)
-
     def spawn(port: Int): Unit = {
         init(port)
         Util.spawn(() => runSelectLoop())
@@ -84,6 +81,9 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         this.fServerSocket = Some(serverSocket)
         debugPrintln(s"Server bound: ${port}")
     }
+
+    // ...only for registerForPeers from user clients (cf. events from event loop)
+    private[runtime] def registerWithSelector(c: SocketChannel, k: Int): Unit = c.register(this.fSelector.get, k)
 
     // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
@@ -176,6 +176,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                             enqueueClose()
                             println("Force stopped.")
                             return
+                            //default x =>
                     }
                 }
             }
@@ -184,12 +185,11 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     }
 
     @throws[IOException]
-    private def handleAcceptAndRegister(selector: Selector, key: SelectionKey): Option[SocketChannel] = {
+    private def handleAcceptAndRegister(selector: Selector, key: SelectionKey): Unit = {
         val serverSocket = key.channel.asInstanceOf[ServerSocketChannel]
         val client = accept(serverSocket)
         client.register(selector, SelectionKey.OP_READ)
         debugPrintln(s"Registered accepted for READ: ${client.getRemoteAddress()}")
-        Some(client)
     }
 
     @throws[IOException]
@@ -231,7 +231,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     /* Channel I/O -- independent of event loop */
 
     @throws[IOException]
-    private[runtime] def connect(host: Net.Host, port: Net.Port): SocketChannel = {
+    private def connect(host: Net.Host, port: Net.Port): SocketChannel = {
         //println(s"${name} connecting... ${port}")
         val sSocket = SocketChannel.open(new InetSocketAddress(host, port))
         sSocket.configureBlocking(false)
