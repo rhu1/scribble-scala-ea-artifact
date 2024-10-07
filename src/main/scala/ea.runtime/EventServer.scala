@@ -1,7 +1,7 @@
 package ea.runtime
 
 import java.io.IOException
-import java.net.InetSocketAddress
+import java.net.{InetSocketAddress, SocketException}
 import java.nio.ByteBuffer
 import java.nio.channels.{SelectionKey, Selector, ServerSocketChannel, SocketChannel}
 import java.util.ConcurrentModificationException
@@ -89,7 +89,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     @throws[IOException]
     private[runtime] def enqueueClose(): Unit = {
         enqueueForSelectLoop(() => {
-            debugPrintln("stopping...")
+            debugPrintln("Stopping...")
             this.isSelecting = false
             try {
                 this.fSelector.foreach(_.close)
@@ -153,30 +153,38 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     // !!! concurrent modif? probably close? e.g., two sessions (e.g., Gen07), close in handler for one session closes all, but other session could still be in remaining while-loop keys (e.g., concurrent EOF?)
                     // cf. CancelledKey
                     // FIXME close should be enqueued?
+                    val key = keys.next()
+                    keys.remove()
                     try {
-                        val key = keys.next()
-                        keys.remove()
-
-                        // HERE TODO CancelledKey exception (e.g., peer closed) -- e.g., TestRobot
-
-                        if (key.isAcceptable) {
+                        if (key.isValid && key.isAcceptable) {
                             handleAcceptAndRegister(selector, key)
                         }
-                        if (key.isReadable) {
+                        else if (key.isValid && key.isReadable) {
                             handleReadAndRegister(selector, key)
                         }
+
+                        // HERE TODO CancelledKey exception (e.g., peer closed) -- e.g., TestRobot -- cf. isValid
+
                     } catch {
 
                         // HERE SocketException from handleRead
+                        //case e: CancelledKeyException => return  -- cf. isValid
+
+                        case e: SocketException =>
+                            key.cancel()
+                            debugPrintln("Suppressing SocketException...")
+                            e.printStackTrace()
+                            return
 
                         case e: ConcurrentModificationException =>
-                            println(debugToString("Caught..."))
+                            println(debugToString("[ERROR] Caught..."))
                             e.printStackTrace()
                             //close()
+                            println("[ERROR] Force stopping...")
                             enqueueClose()
-                            println("Force stopped.")
                             return
-                            //default x =>
+
+                        //default x =>
                     }
                 }
             }
