@@ -32,7 +32,10 @@ object TestActor {
             this.initHandlers((sid, "B")) = () => { println("baaaaaaaaaar connect"); Done }
 
             TestActorB.connectAndRegister("localhost", 8888).get
-            doConnect("B", "localhost", 8888, sid, "A", this.fSelector.get, "TestB42")  // XXX fake iota doesn't work
+            //doConnect("B", "localhost", 8888, sid, "A", this.fSelector.get, "TestB42")  // XXX fake iota doesn't work
+
+            // FIXME selector
+            //doConnect("B", "localhost", 8888, sid, "A", "TestB42")  // XXX fake iota doesn't work
 
             var i = 1
             while (true) {
@@ -105,14 +108,14 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
     //def weaken[S <: Session.Linear](s: S): (S, Done.type) = (s, Done)
 
-    // !!! deprecate
+    /*// !!! deprecate
     def spawnAndRegister
             [D <: Session.Data, S <: ActorState[Actor]]
             (apHost: String, apPort: Int, proto: Session.Global, r: Session.Role,
              port: Int, d: D, f: (D, S) => Done.type, m: (Session.Sid) => S, peers: Set[Session.Role]): Unit = {
         spawn(port)
         enqueueRegisterForPeers(apHost, apPort, proto, r, port, d, f, m, peers)
-    }
+    }*/
 
     def enqueueRegisterForPeers
             [D <: Session.Data, S <: ActorState[Actor]]
@@ -128,7 +131,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         enqueueForSelectLoop(() => registerForPeers(apHost, apPort, proto, r, port, d, g, peers))
     }
 
-    def enqueueRegisterForPeersFoo[D <: Session.Data, A <: Actor, S <: ActorState[A]]
+    /*def enqueueRegisterForPeersFoo[D <: Session.Data, A <: Actor, S <: ActorState[A]]
             (apHost: String, apPort: Int, proto: Session.Global, r: Session.Role,
              port: Int, d: D, f: (D, S) => _, m: (Session.Sid) => S,
              peers: Set[Session.Role]): Unit = {
@@ -140,27 +143,28 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
             done
         }
         enqueueForSelectLoop(() => registerForPeersFoo(apHost, apPort, proto, r, port, d, g, peers))
-    }
+    }*/
 
     @throws[IOException]
     def finishAndClose[A <: Actor](s: Session.End[A]): Done.type = {
         val done = s.finish()
-        this.close()
+        this.enqueueClose()
         done
     }
 
-    @throws[IOException]
+    /*@throws[IOException]
     def finishAndCloseFoo[A <: Actor, T](s: Session.EndFoo[A, T]): T = {
         val done = s.finishFoo()
         this.close()
         //done
         //new Foo()
         s.getT()
-    }
+    }*/
 
 
     @throws[IOException]
     def doConnect(rr: Session.Role, host: Net.Host, port: Net.Port,
+                  //sid: Session.Sid, rrr: Session.Role, iota: Net.Liota): Unit = {
                   sid: Session.Sid, rrr: Session.Role, selector: Selector, iota: Net.Liota): Unit = {
         val opt = connectAndRegister(host, port)
         if (opt.isEmpty) {
@@ -173,6 +177,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         write(sSocket, msg1)
 
         sSocket.register(selector, SelectionKey.OP_READ)
+        //registerWithSelector(sSocket, SelectionKey.OP_READ)
         this.sockets((sid, rrr)) = sSocket
         debugPrintln(s"Connected Actor: sid=${sid}, host=${host}:${port}")
     }
@@ -390,7 +395,8 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 val g = () => f.apply(sid)
                 setInitHandler(sid, rr, g)
 
-                apSocket.register(this.fSelector.get, SelectionKey.OP_READ)
+                apSocket.register(selector, SelectionKey.OP_READ)
+                //registerWithSelector(apSocket, SelectionKey.OP_READ)
 
             } else {
                 errPrintln(s"Unknown kind: ${kind}")
@@ -414,22 +420,22 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
             val pay = s"IOTADONE_${sid._1}_${sid._2}_${rr}_${iota}"
             write(client, pay)
-            client.register(selector, SelectionKey.OP_READ)
+            //client.register(selector, SelectionKey.OP_READ)
         }
     }
 
     /* ... */
 
-    // FIXME deprecate
+    /*// FIXME deprecate
     @throws[IOException]
     def registerForPeers2(apHost: Net.Host, apPort: Net.Port, proto: Session.Global,
                           r: Session.Role, port: Net.Port, f: Session.Sid => Done.type,
                           peers: Set[Session.Role]): Unit = {
         val g = (d: Session.Data, sid: Session.Sid) => f(sid)
         registerForPeers(apHost, apPort, proto, r, port, null, g, peers)
-    }
+    }*/
 
-    @throws[IOException]
+    /*@throws[IOException]
     def registerForPeersFoo[D <: Session.Data]
     (apHost: Net.Host, apPort: Net.Port, proto: Session.Global,
      r: Session.Role, port: Net.Port, d: D, f: (D, Session.Sid) => _,
@@ -438,7 +444,8 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         debugPrintln(s"Registering as ${r} server with AP: ${proto}")
         try {
             val apSocket = connect(apHost, apPort)
-            apSocket.register(this.fSelector.get, SelectionKey.OP_READ)
+            //apSocket.register(this.fSelector.get, SelectionKey.OP_READ)
+            registerWithSelector(apSocket, SelectionKey.OP_READ)
 
             debugPrintln(s"Connected AP: ${apSocket.getLocalAddress} -> ${apSocket.getRemoteAddress}")
 
@@ -455,7 +462,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         } catch {
             case e: IOException => e.printStackTrace()
         }
-    }
+    }*/
 
     @throws[IOException]
     def registerForPeers[D <: Session.Data]
@@ -472,9 +479,10 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
             }
             val apSocket = opt.get*/
             val apSocket = connect(apHost, apPort)
-            //val apSocket = SocketChannel.open(new InetSocketAddress(apHost, apPort))
-            //apSocket.configureBlocking(false)
-            apSocket.register(this.fSelector.get, SelectionKey.OP_READ)
+            ////val apSocket = SocketChannel.open(new InetSocketAddress(apHost, apPort))
+            ////apSocket.configureBlocking(false)
+            //apSocket.register(this.fSelector.get, SelectionKey.OP_READ)
+            registerWithSelector(apSocket, SelectionKey.OP_READ)
 
             debugPrintln(s"Connected AP: ${apSocket.getLocalAddress} -> ${apSocket.getRemoteAddress}")
 

@@ -1,10 +1,9 @@
 package ea.runtime
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException, ObjectInputStream, ObjectOutputStream}
+import java.io.{ByteArrayInputStream, IOException, ObjectInputStream}
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.{SelectionKey, Selector, ServerSocketChannel, SocketChannel}
-import java.nio.charset.StandardCharsets
 import java.util.ConcurrentModificationException
 import scala.collection.mutable.ListBuffer
 
@@ -54,27 +53,26 @@ object TestEventServerA extends EventServer("(TestA)") {
 
 /* ... */
 
-abstract class EventServer[Id](val name: String) extends DebugPrinter {
+abstract class EventServer(val name: String) extends DebugPrinter {
 
-    private var selecting = false
+    private var isSelecting = false  // main selector loop
     private var fServerSocket: Option[ServerSocketChannel] = None
-    var fSelector: Option[Selector] = None
+    private var fSelector: Option[Selector] = None
 
-    //private val sockets = collection.mutable.Map[Id, SocketChannel]()
+    // ...only for registerForPeers from user clients (cf. events from event loop)
+    def registerWithSelector(c: SocketChannel, k: Int): Unit = c.register(this.fSelector.get, k)
 
     def spawn(port: Int): Unit = {
         init(port)
         Util.spawn(() => runSelectLoop())
-        //import scala.concurrent.ExecutionContext.Implicits.global
-        //Future { runSelectLoop() }  // XXX Terminates too early?
     }
 
     // ...integrate into run?
-    // Pre: !this.selecting, this.serverSocket == None, this.selector == None
+    // Pre: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
     def init(port: Int): Unit = {
-        if (this.selecting) {  // Implies this.selector and this.serverSocket not None (via run)
-            errPrintln("Already selecting, cannot init again")
+        if (this.isSelecting) {  // Implies this.selector and this.serverSocket not None (via run)
+            errPrintln("Already isSelecting, cannot init again")
             return
         }
         val selector = Selector.open
@@ -88,21 +86,23 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
     }
 
     // FIXME enqueue?
-    // Post: !this.selecting, this.serverSocket == None, this.selector == None
+    // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
-    def close(): Unit = {
-        debugPrintln("stopping...")
-        this.selecting = false
-        try {
-            this.fSelector.foreach(_.close)
-        } finally {
+    def enqueueClose(): Unit = {
+        enqueueForSelectLoop(() => {
+            debugPrintln("stopping...")
+            this.isSelecting = false
             try {
-                this.fServerSocket.foreach(_.close)
+                this.fSelector.foreach(_.close)
             } finally {
-                this.fSelector = None
-                this.fServerSocket = None
+                try {
+                    this.fServerSocket.foreach(_.close)
+                } finally {
+                    this.fSelector = None
+                    this.fServerSocket = None
+                }
             }
-        }
+        })
     }
 
     private val lock = new Object()
@@ -118,11 +118,11 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
         }
     }
 
-    // Pre: !this.selecting, this.serverSocket == Some, this.selector == Some
+    // Pre: !this.isSelecting, this.serverSocket == Some, this.selector == Some
     @throws[IOException]
     def runSelectLoop(): Unit = {
-        if (this.selecting) {
-            errPrintln("Already selecting")
+        if (this.isSelecting) {
+            errPrintln("Already isSelecting")
             return
         } else if (this.fServerSocket.isEmpty) {
             errPrintln("ServerSocket not open")
@@ -132,10 +132,10 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
             return
         }
 
-        this.selecting = true;
+        this.isSelecting = true;
         //val serverSocket = this.serverSocket.get
         val selector = this.fSelector.get
-        while (this.selecting) {
+        while (this.isSelecting) {
 
             this.lock.synchronized {
                 while (this.queued.nonEmpty) {
@@ -144,39 +144,41 @@ abstract class EventServer[Id](val name: String) extends DebugPrinter {
                 }
             }
 
-            debugPrintln("Selecting...")
-            selector.select()
+            if (selector.isOpen) { // cf. done a queued close above
+                debugPrintln("Selecting...")
+                selector.select()
 
-            debugPrintln(s"...selected: ${selector.selectedKeys.toString}")
-            val keys = selector.selectedKeys.iterator
-            while (keys.hasNext) {
+                debugPrintln(s"...selected: ${selector.selectedKeys.toString}")
+                val keys = selector.selectedKeys.iterator
+                while (keys.hasNext) {
 
-                // !!! concurrent modif? probably close? e.g., two sessions (e.g., Gen07), close in handler for one session closes all, but other session could still be in remaining while-loop keys (e.g., concurrent EOF?)
-                // cf. CancelledKey
-                // FIXME close should be enqueued?
-                try {
-                    val key = keys.next()
-                    keys.remove()
+                    // !!! concurrent modif? probably close? e.g., two sessions (e.g., Gen07), close in handler for one session closes all, but other session could still be in remaining while-loop keys (e.g., concurrent EOF?)
+                    // cf. CancelledKey
+                    // FIXME close should be enqueued?
+                    try {
+                        val key = keys.next()
+                        keys.remove()
 
-                    // HERE TODO CancelledKey exception (e.g., peer closed) -- e.g., TestRobot
+                        // HERE TODO CancelledKey exception (e.g., peer closed) -- e.g., TestRobot
 
-                    if (key.isAcceptable) {
-                        handleAcceptAndRegister(selector, key)
+                        if (key.isAcceptable) {
+                            handleAcceptAndRegister(selector, key)
+                        }
+                        if (key.isReadable) {
+                            handleReadAndRegister(selector, key)
+                        }
+                    } catch {
+
+                        // HERE SocketException from handleRead
+
+                        case e: ConcurrentModificationException =>
+                            println(debugToString("Caught..."))
+                            e.printStackTrace()
+                            //close()
+                            enqueueClose()
+                            println("Force stopped.")
+                            return
                     }
-                    if (key.isReadable) {
-                        handleReadAndRegister(selector, key)
-                    }
-                } catch {
-
-                    // HERE SocketException from handleRead
-
-                    case e: ConcurrentModificationException =>
-                        println(debugToString("Caught..."))
-                        e.printStackTrace()
-                        //close()
-                        enqueueForSelectLoop(() => close())
-                        debugPrintln("Force stopped.")
-                        return
                 }
             }
         }
