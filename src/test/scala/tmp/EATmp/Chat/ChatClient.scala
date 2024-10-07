@@ -12,11 +12,12 @@ object TestChatRoomClient {
         println("hello")
 
         val client1 = new ChatClient("client1", 7777)
-        //client1.debug = true
+        client1.debug = true
         val d1 = client1.spawn()
         client1.joinRoom(d1, "room1", 9998)
 
         val client2 = new ChatClient("client2", 6666)
+        client2.debug = true
         val d2 = client2.spawn()
         client2.joinRoom(d2, "room1", 9998)
     }
@@ -34,7 +35,7 @@ object TestChatClient {
         c1.run(d1, 9997)
 
         val c2 = new ChatClient("client2", 7779)
-        //c2.debug = true
+        c2.debug = true
         val d2 = c2.spawn()
         c2.run(d2, 9997)
     }
@@ -162,7 +163,7 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
     }
 
     override def handleException(addr: SocketAddress): Unit = {
-        print(s"Channel exception from: ${addr}")
+        println(s"Channel exception from: ${addr}")
     }
-    
+
 }

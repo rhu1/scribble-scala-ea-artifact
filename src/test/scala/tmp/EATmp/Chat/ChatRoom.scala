@@ -32,7 +32,7 @@ class DataR extends Session.Data {
 trait Room extends ChatProto2.ActorR with ChatProto3.ActorR {
 
     // !!! @targetName manually added inside APIs to resolve ChatProto2/3.registerR clash
-    
+
     /*def registerR2[D <: Session.Data](port: Int, apHost: String, apPort: Int, d: D, f: (D, ChatProto2.R1Suspend) => Done.type): Unit = {
         registerR(port, apHost, apPort, d, f)
     }
@@ -115,6 +115,6 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
     }*/
 
     override def handleException(addr: SocketAddress): Unit = {
-        print(s"Channel exception from: ${addr}")
+        println(s"Channel exception from: ${addr}")
     }
 }

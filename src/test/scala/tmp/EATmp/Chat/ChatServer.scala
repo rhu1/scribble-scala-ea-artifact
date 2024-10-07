@@ -18,7 +18,7 @@ object TestChatServer {
         ap1.spawn(9997)
 
         val server = new ChatServer("Server", 8888)
-        //server.debug = true
+        server.debug = true
         server.spawn()
     }
 }
@@ -75,6 +75,8 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
                     val apPort = d.nextAPPort()
                     val ap2 = new ChatProto2.ChatProto2
                     val ap3 = new ChatProto3.ChatProto3
+                    //ap2.debug = true
+                    //ap3.debug = true
                     ap2.spawn(apPort)
                     ap3.spawn(apPort+1)
                     Thread.sleep(1000)
@@ -95,7 +97,7 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
     }
 
     override def handleException(addr: SocketAddress): Unit = {
-        print(s"Channel exception from: ${addr}")
+        println(s"Channel exception from: ${addr}")
     }
 }
 

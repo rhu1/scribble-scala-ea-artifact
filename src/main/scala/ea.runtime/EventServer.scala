@@ -111,11 +111,11 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         })
     }
 
-    private val selectorLock = new Object()
+    private val runQueueLock = new Object()
     private val runQueue = new ListBuffer[() => Unit]()
 
     private[runtime] def enqueueForSelectLoop(f: () => Unit): Unit = {
-        this.selectorLock.synchronized {
+        this.runQueueLock.synchronized {
             this.runQueue += f
             //this.selectorLock.notifyAll()
         }
@@ -142,14 +142,18 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         val selector = this.fSelector.get
         while (this.isSelecting) {
 
-            this.selectorLock.synchronized {
+            this.runQueueLock.synchronized {
                 while (this.runQueue.nonEmpty) {
                     val next = this.runQueue.remove(0)
                     next.apply()
                 }
             }
 
-            if (selector.isOpen) { // cf. done a runQueue close above
+            if (!selector.isOpen) { // cf. maybe done a runQueue close above
+                if (this.isSelecting) {
+                    throw new RuntimeException("[ERROR]");
+                }
+            } else {
                 debugPrintln("Selecting...")
                 selector.select()
 
@@ -161,11 +165,11 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     // cf. CancelledKey
                     // FIXME close should be enqueued?
                     val key = keys.next()
-                    val c = key.channel()
                     keys.remove()
                     if (key.isValid) {
                         var addr: SocketAddress = null // TODO Optional
                         try {
+                            val c = key.channel()
                             addr = c match {
                                 case cc: SocketChannel => cc.getRemoteAddress
                                 case cc: ServerSocketChannel =>
@@ -194,8 +198,8 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     }
                 }
             }
-            debugPrintln("Stopped.")
         }
+        debugPrintln("Stopped.")
     }
 
     // ...rename handleAndRegister

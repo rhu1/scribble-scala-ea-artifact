@@ -46,7 +46,7 @@ object A extends Actor("MyA") with ActorA {
     }
 
     def a1(d: DataA, s: Proto10.A1): Done.type = {
-        registerA(7777, "localhost", 8888, DataA(), a1)  // XXX what if init failure before here?
+        registerA(7777, "localhost", 8888, DataA(), a1)  // XXX what if init failure before here? maybe register in failure handler (but maybe already registered?)
         println(s"(${s.sid}) A sending L1...")
         s.sendL1().suspend(d, a2)
     }
