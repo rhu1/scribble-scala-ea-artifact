@@ -3,8 +3,7 @@ package ea.runtime
 import java.io.IOException
 import java.net.{InetSocketAddress, SocketException}
 import java.nio.ByteBuffer
-import java.nio.channels.{SelectionKey, Selector, ServerSocketChannel, SocketChannel}
-import java.util.ConcurrentModificationException
+import java.nio.channels.*
 import scala.collection.mutable.ListBuffer
 
 
@@ -156,26 +155,18 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     val key = keys.next()
                     keys.remove()
                     try {
+                        // Concurrent channel failure can invalidate key
                         if (key.isValid && key.isAcceptable) {
                             handleAcceptAndRegister(selector, key)
-                        }
-                        else if (key.isValid && key.isReadable) {
+                        } else if (key.isValid && key.isReadable) {
                             handleReadAndRegister(selector, key)
                         }
-
-                        // HERE TODO CancelledKey exception (e.g., peer closed) -- e.g., TestRobot -- cf. isValid
-
                     } catch {
-
-                        // HERE SocketException from handleRead
-                        //case e: CancelledKeyException => return  -- cf. isValid
-
-                        case e: SocketException =>
+                        case e: (CancelledKeyException | SocketException) =>
                             key.cancel()
-                            debugPrintln("Suppressing SocketException...")
+                            debugPrintln("Swallowing...")
                             e.printStackTrace()
                             return
-
                         case e: Exception =>  // cf. ConcurrentModificationException
                             println(debugToString("[ERROR] Caught unexpected..."))
                             e.printStackTrace()
