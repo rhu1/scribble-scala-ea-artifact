@@ -189,9 +189,9 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                                 new Exception(e).printStackTrace()
                                 handleException(addr)
                             case e: Exception =>
-                                println(debugToString("[ERROR] Caught unexpected..."))
+                                errPrintln(debugToString("Caught unexpected..."))
                                 new Exception(e).printStackTrace()
-                                println("[ERROR] Force stopping...")
+                                errPrintln(debugToString("[ERROR] Force stopping..."))
                                 enqueueClose()
                                 return
                         }

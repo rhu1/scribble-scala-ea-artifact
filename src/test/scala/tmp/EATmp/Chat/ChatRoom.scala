@@ -85,7 +85,8 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
                 s.suspend(d, r2_1)
             case ChatProto2.LeaveRoomR(sid, x, s) =>
                 //d.out -= sid  // !!! send BYE  // XXX wrong sid  // TODO use d to pair up sids
-                finishAndClose(s)
+                //finishAndClose(s)
+                s.finish()
         }
     }
 
@@ -115,6 +116,6 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
     }*/
 
     override def handleException(addr: SocketAddress): Unit = {
-        println(s"Channel exception from: ${addr}")
+        println(debugToString(s"Channel exception from: ${addr}"))
     }
 }
