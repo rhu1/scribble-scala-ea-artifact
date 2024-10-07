@@ -8,7 +8,7 @@ import java.util.ConcurrentModificationException
 import scala.collection.mutable.ListBuffer
 
 
-object TestEventServer {
+/*object TestEventServer {
 
     def main(args: Array[String]): Unit = {
         println("hello")
@@ -48,19 +48,19 @@ object TestEventServerA extends EventServer("(TestA)") {
         //(debugToString andThen println)(msg)
         debugPrintln(s"!!! ${ms}")
     }
-}
+}*/
 
 
 /* ... */
 
 abstract class EventServer(val name: String) extends DebugPrinter {
 
-    private var isSelecting = false  // main selector loop
+    private var isSelecting = false  // controls main select loop
     private var fServerSocket: Option[ServerSocketChannel] = None
     private var fSelector: Option[Selector] = None
 
     // ...only for registerForPeers from user clients (cf. events from event loop)
-    def registerWithSelector(c: SocketChannel, k: Int): Unit = c.register(this.fSelector.get, k)
+    private[runtime] def registerWithSelector(c: SocketChannel, k: Int): Unit = c.register(this.fSelector.get, k)
 
     def spawn(port: Int): Unit = {
         init(port)
@@ -70,7 +70,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     // ...integrate into run?
     // Pre: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
-    def init(port: Int): Unit = {
+    private[runtime] def init(port: Int): Unit = {
         if (this.isSelecting) {  // Implies this.selector and this.serverSocket not None (via run)
             errPrintln("Already isSelecting, cannot init again")
             return
@@ -85,10 +85,9 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         debugPrintln(s"Server bound: ${port}")
     }
 
-    // FIXME enqueue?
     // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
-    def enqueueClose(): Unit = {
+    private[runtime] def enqueueClose(): Unit = {
         enqueueForSelectLoop(() => {
             debugPrintln("stopping...")
             this.isSelecting = false
@@ -105,13 +104,13 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         })
     }
 
-    private val lock = new Object()
-    private val queued = new ListBuffer[() => Unit]()
+    private val selectorLock = new Object()
+    private val runQueue = new ListBuffer[() => Unit]()
 
-    def enqueueForSelectLoop(f: () => Unit): Unit = {
-        this.lock.synchronized {
-            this.queued += f
-            //this.lock.notifyAll()
+    private[runtime] def enqueueForSelectLoop(f: () => Unit): Unit = {
+        this.selectorLock.synchronized {
+            this.runQueue += f
+            //this.selectorLock.notifyAll()
         }
         if (this.fSelector.isDefined) {
             this.fSelector.get.wakeup()
@@ -120,7 +119,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
 
     // Pre: !this.isSelecting, this.serverSocket == Some, this.selector == Some
     @throws[IOException]
-    def runSelectLoop(): Unit = {
+    private[runtime] def runSelectLoop(): Unit = {
         if (this.isSelecting) {
             errPrintln("Already isSelecting")
             return
@@ -133,18 +132,17 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         }
 
         this.isSelecting = true;
-        //val serverSocket = this.serverSocket.get
         val selector = this.fSelector.get
         while (this.isSelecting) {
 
-            this.lock.synchronized {
-                while (this.queued.nonEmpty) {
-                    val next = this.queued.remove(0)
+            this.selectorLock.synchronized {
+                while (this.runQueue.nonEmpty) {
+                    val next = this.runQueue.remove(0)
                     next.apply()
                 }
             }
 
-            if (selector.isOpen) { // cf. done a queued close above
+            if (selector.isOpen) { // cf. done a runQueue close above
                 debugPrintln("Selecting...")
                 selector.select()
 
@@ -186,7 +184,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     }
 
     @throws[IOException]
-    def handleAcceptAndRegister(selector: Selector, key: SelectionKey): Option[SocketChannel] = {
+    private def handleAcceptAndRegister(selector: Selector, key: SelectionKey): Option[SocketChannel] = {
         val serverSocket = key.channel.asInstanceOf[ServerSocketChannel]
         val client = accept(serverSocket)
         client.register(selector, SelectionKey.OP_READ)
@@ -195,7 +193,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     }
 
     @throws[IOException]
-    def handleReadAndRegister(selector: Selector, key: SelectionKey): Unit = {
+    private def handleReadAndRegister(selector: Selector, key: SelectionKey): Unit = {
         val client = key.channel.asInstanceOf[SocketChannel]
         //val r = client.read(buffer)
         val opt = read(client)
@@ -213,10 +211,10 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     // cf. val client = key.channel.asInstanceOf[SocketChannel]
     @throws[IOException]
     //def handleReadAndRegister(selector: Selector, key: SelectionKey): Unit
-    def handleReadAndRegister(client: SocketChannel, selector: Selector, msg: String): Unit
+    private[runtime] def handleReadAndRegister(client: SocketChannel, selector: Selector, msg: String): Unit
 
     @throws[IOException]
-    def connectAndRegister(host: Net.Host, port: Net.Port): Option[SocketChannel] = {
+    private[runtime] def connectAndRegister(host: Net.Host, port: Net.Port): Option[SocketChannel] = {
         if (this.fSelector.isEmpty) {
             errPrintln("No selector")
             None
@@ -230,25 +228,10 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     }
 
 
-    /* ... */
-
-    /*def addSocket(id: Id, socket: SocketChannel): Unit = {
-        this.sockets(id) = socket
-    }
-
-    def getSocket(id: Id): Option[SocketChannel] = {
-        if (!this.sockets.contains(id)) {
-            None
-        } else {
-            Some(this.sockets(id))
-        }
-    }*/
-
-
     /* Channel I/O -- independent of event loop */
 
     @throws[IOException]
-    def connect(host: Net.Host, port: Net.Port): SocketChannel = {
+    private[runtime] def connect(host: Net.Host, port: Net.Port): SocketChannel = {
         //println(s"${name} connecting... ${port}")
         val sSocket = SocketChannel.open(new InetSocketAddress(host, port))
         sSocket.configureBlocking(false)
@@ -257,7 +240,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     }
 
     @throws[IOException]
-    def accept(/*selector: Selector, */serverSocket: ServerSocketChannel): SocketChannel = {
+    private def accept(/*selector: Selector, */serverSocket: ServerSocketChannel): SocketChannel = {
         val client = serverSocket.accept()
         client.configureBlocking(false)
         //client.register(selector, SelectionKey.OP_READ)
@@ -265,44 +248,8 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         client
     }
 
-    /*
-    //def serialise(value: Serializable): Array[Byte] = {
-    def serialise(value: Serializable): String = {
-        val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
-        val oos = new ObjectOutputStream(stream)
-        oos.writeObject(value)
-        oos.close()
-        val bs = stream.toByteArray
-        new String(bs, StandardCharsets.UTF_8)
-    }
-
-    //def deserialise(bytes: Array[Byte]): Serializable = {
-    def deserialise(bs: String): Serializable = {
-        val bytes = bs.getBytes(StandardCharsets.UTF_8)
-        val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
-        val value = ois.readObject.asInstanceOf[Serializable]
-        ois.close()
-        value
-    }
-
-    def serialise1(value: Serializable): Array[Byte] = {
-        val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
-        val oos = new ObjectOutputStream(stream)
-        oos.writeObject(value)
-        oos.close()
-        stream.toByteArray
-    }
-    */
-
-    def deserialise1(bytes: Array[Byte]): Serializable = {
-        val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
-        val value = ois.readObject.asInstanceOf[Serializable]
-        ois.close()
-        value
-    }
-
     @throws[IOException]
-    def write(c: SocketChannel, pay: String): Unit = {
+    private[runtime] def write(c: SocketChannel, pay: String): Unit = {
 
         // !!! val tmp = catching(classOf[IOException]).either(c.getRemoteAddress)
         val addr = c.getRemoteAddress()
@@ -324,7 +271,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
 
     // !!! exceptions vs. Option, Try, Either, ... -- scala 3 (using CanThrow[...])
     @throws[IOException]
-    def read(c: SocketChannel): Seq[String] = {
+    private def read(c: SocketChannel): Seq[String] = {
         val k = c.getRemoteAddress().toString
         val buffer = this.buffers.getOrElseUpdate(k, ByteBuffer.allocate(2048))  // !!!
         val r = c.read(buffer)
@@ -377,4 +324,27 @@ abstract class EventServer(val name: String) extends DebugPrinter {
 
     //def nameToString(): String = s"Actor(${name})"
     def nameToString(): String = this.name
+
+
+
+    /* ... */
+
+    /*//def serialise(value: Serializable): Array[Byte] = {
+    def serialise(value: Serializable): String = {
+        val stream: ByteArrayOutputStream = new ByteArrayOutputStream()
+        val oos = new ObjectOutputStream(stream)
+        oos.writeObject(value)
+        oos.close()
+        val bs = stream.toByteArray
+        new String(bs, StandardCharsets.UTF_8)
+    }
+
+    //def deserialise(bytes: Array[Byte]): Serializable = {
+    def deserialise(bs: String): Serializable = {
+        val bytes = bs.getBytes(StandardCharsets.UTF_8)
+        val ois = new ObjectInputStream(new ByteArrayInputStream(bytes))
+        val value = ois.readObject.asInstanceOf[Serializable]
+        ois.close()
+        value
+    }*/
 }
