@@ -1,6 +1,7 @@
 package ea.runtime
 
 import java.io.IOException
+import java.net.InetSocketAddress
 
 object Done
 
@@ -107,7 +108,8 @@ object Session {
     def become[D, S <: ActorState[Actor]]
     //def become[D, A <: Actor, S <: ActorState[A]]  // FIXME probably due to Actor hardcoded in places
             (d: D, a: LinSome[S], f: (D, S) => Done.type): Done.type = {
-        val hack = a.hackGet
+        //val hack = a.hackGet
+        val hack = a.t
         try {
             val s = a.get // at most once get
             val done = f(d, s)
@@ -118,8 +120,7 @@ object Session {
                 hack.actor.end(hack.sid, hack.role)
                 hack.actor.debugPrintln(s"become ${hack.sid}(${hack.role}) swallowing...")
                 new Exception(e).printStackTrace()
-                /*val opt = Some(s.sid)
-                s.actor.handleException(addr, opt)*/
+                hack.actor.handleException(..., Some(hack.sid))
                 Done  // FIXME ?
             case e: Exception =>
                 hack.actor.errPrintln(hack.actor.debugToString("Caught unexpected..."))
@@ -150,13 +151,13 @@ object Session {
             n
         }
     }
-    case class LinSome[T <: DynLin](private val t: T) extends LinOption[T] {  // CHECKME private?
+    case class LinSome[T <: DynLin](private[runtime] val t: T) extends LinOption[T] {  // CHECKME private?
         def get: T = {
             checkNotUsed()
             this.isUsed = true
             t
         }
-        def hackGet: T = this.t  // FIXME need sid/role for error reporting
+        //private def hackGet: T = this.t  // FIXME need sid/role for error reporting
     }
 
 }
