@@ -3,6 +3,8 @@ package tmp.EATmp.Chat
 import ea.runtime.{Actor, Done, Net, Session}
 import tmp.EATmp.{ChatProto2, ChatProto3}
 
+import java.net.SocketAddress
+
 object TestChatRoom {
 
     def main(args: Array[String]): Unit = {
@@ -111,4 +113,8 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
     def foo(x: I): x.inner = {
         ....
     }*/
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
+    }
 }

@@ -2,6 +2,8 @@ package tmp.EATmp.Proto01
 
 import ea.runtime.{Actor, Done, Session}
 
+import java.net.SocketAddress
+
 object TestProto01 {
 
     def main(args: Array[String]): Unit = {
@@ -43,6 +45,10 @@ object A extends Actor("MyA") with ActorA {
         //s.sendL1(s"abc")  // testing linearity
         finishAndClose(s.sendL1(s"abc"))
     }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
+    }
 }
 
 
@@ -68,6 +74,10 @@ object B extends Actor("MyB") with ActorB {
                 //Done  // testing linearity
                 finishAndClose(s)
         }
+    }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
     }
 }
 

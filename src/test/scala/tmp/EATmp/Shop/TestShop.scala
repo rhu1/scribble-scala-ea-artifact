@@ -4,6 +4,8 @@ import ea.runtime.{Actor, Done, Session}
 import tmp.EATmp.ShopProto1.*
 import tmp.EATmp.ShopProto2
 
+import java.net.SocketAddress
+
 object TestShop {
 
     def main(args: Array[String]): Unit = {
@@ -86,6 +88,10 @@ object C extends Actor("Customer") with ActorC {
             case OKcC(sid, x, s) => c3(d, s)
             case DeclinedcC(sid, x, s) => c3(d, s)
         }
+    }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
     }
 }
 
@@ -207,6 +213,9 @@ object S extends Actor("Shop") with SS {
         }
     }
 
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
+    }
 }
 
 
@@ -232,6 +241,10 @@ object SF extends Actor("Staff") with ShopProto2.ActorSF {
             case ShopProto2.AddItemSF(sid, x, s) => s.suspend(d, sf1)
             case ShopProto2.RemoveItemSF(sid, x, s) => s.suspend(d, sf1)
         }
+    }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
     }
 }
 
@@ -262,6 +275,10 @@ object P extends Actor("PaymentProcessor") with ActorP {
                     s.sendDeclined("()").suspend(d, p1)
                 }
         }
+    }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
     }
 }
 

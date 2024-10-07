@@ -2,6 +2,8 @@ package tmp.EATmp.RobotProto
 
 import ea.runtime.{Actor, Done, Net, Session}
 
+import java.net.SocketAddress
+
 object TestRobot {
 
     def main(args: Array[String]): Unit = {
@@ -73,6 +75,10 @@ class R(pid: String, val port: Net.Port) extends Actor(pid) with ActorR {
                 println(s"...${pid} exited.")
                 finishAndClose(s.sendOutside("outside"))
         }
+    }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
     }
 }
 
@@ -147,6 +153,10 @@ class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extend
                 s.finish()
         }
     }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
+    }
 }
 
 
@@ -197,6 +207,10 @@ object W extends Actor("Warehouse") with ActorW {
                 //finishAndClose(s.sendTableIdle("idle"))
                 s.sendTableIdle("idle").finish()
         }
+    }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
     }
 }
 

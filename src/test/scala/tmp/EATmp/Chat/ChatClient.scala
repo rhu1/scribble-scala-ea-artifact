@@ -4,6 +4,8 @@ import ea.runtime.{Actor, Done, Net, Session, Util}
 import ea.runtime.Net.{Pid, Port}
 import tmp.EATmp.{ChatProto1, ChatProto2, ChatProto3}
 
+import java.net.SocketAddress
+
 object TestChatRoomClient {
 
     def main(args: Array[String]): Unit = {
@@ -158,4 +160,9 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
         }
         timer(d)
     }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        print(s"Channel exception from: ${addr}")
+    }
+    
 }

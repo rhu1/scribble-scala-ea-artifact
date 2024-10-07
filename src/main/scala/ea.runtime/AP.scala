@@ -1,6 +1,7 @@
 package ea.runtime
 
 import java.io.IOException
+import java.net.SocketAddress
 import java.nio.channels.{Selector, SocketChannel}
 import scala.util.Try
 
@@ -187,6 +188,7 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
         }
     }
 
+    override def handleException(addr: SocketAddress): Unit = { }
 
     /* ... */
 

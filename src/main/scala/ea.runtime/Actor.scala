@@ -9,7 +9,7 @@ import scala.concurrent.Promise
 import scala.util.control.Exception.catching
 
 
-object TestActor {
+/*object TestActor {
     var a: Actor = null
 
     def main(args: Array[String]): Unit = {
@@ -47,7 +47,7 @@ object TestActor {
             }
         }
     }
-}
+}*/
 
 /*object TestActorA extends Actor("TestA") {
 
@@ -59,7 +59,7 @@ object TestActor {
 
 //HERE -- add message queues, setHandler should dispatch if queue non-empty -- move dispatchInit back to APDONE
 
-class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
+abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
     class Foo //private()
 
@@ -563,7 +563,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         f()
     }
 
-    def setInitHandlerFoo(sid: Session.Sid, r: Session.Role, f: () => this.Foo): Unit = {
+    /*def setInitHandlerFoo(sid: Session.Sid, r: Session.Role, f: () => this.Foo): Unit = {
         this.initHandlersFoo((sid, r)) = f
     }
 
@@ -574,7 +574,7 @@ class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         val f = this.initHandlersFoo(sid, r)
         this.initHandlersFoo -= ((sid, r))
         f()
-    }
+    }*/
 
     /*// deprecate
     def setHandler(sid: Session.Sid, r: Session.Role, f: (String, String) => Done.type): Unit = {

@@ -1,7 +1,7 @@
 package ea.runtime
 
 import java.io.IOException
-import java.net.{InetSocketAddress, SocketException}
+import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.ByteBuffer
 import java.nio.channels.*
 import scala.collection.mutable.ListBuffer
@@ -81,8 +81,16 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         debugPrintln(s"Server bound: ${port}")
     }
 
+    // Local address
+    private val sockets: collection.mutable.Set[SocketAddress] = collection.mutable.Set()
+
     // ...only for registerForPeers from user clients (cf. events from event loop)
-    private[runtime] def registerWithSelector(c: SocketChannel, k: Int): Unit = c.register(this.fSelector.get, k)
+    private[runtime] def registerWithSelector(c: SocketChannel, k: Int): Unit = {
+        c.register(this.fSelector.get, k)
+        this.sockets += c.getLocalAddress
+    }
+
+    def handleException(addr: SocketAddress): Unit
 
     // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
@@ -153,32 +161,44 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     // cf. CancelledKey
                     // FIXME close should be enqueued?
                     val key = keys.next()
+                    val c = key.channel()
                     keys.remove()
-                    try {
-                        // Concurrent channel failure can invalidate key
-                        if (key.isValid && key.isAcceptable) {
-                            handleAcceptAndRegister(selector, key)
-                        } else if (key.isValid && key.isReadable) {
-                            handleReadAndRegister(selector, key)
+                    if (key.isValid) {
+                        val addr = c match {
+                            case cc: SocketChannel => cc.getRemoteAddress
+                            case cc: ServerSocketChannel => cc.getLocalAddress // !!! FIXME
+                            case _ => throw new RuntimeException(s"TODO: ${c}")
                         }
-                    } catch {
-                        case e: (CancelledKeyException | SocketException) =>
-                            key.cancel()
-                            debugPrintln("Swallowing...")
-                            e.printStackTrace()
-                            return
-                        case e: Exception =>  // cf. ConcurrentModificationException
-                            println(debugToString("[ERROR] Caught unexpected..."))
-                            e.printStackTrace()
-                            println("[ERROR] Force stopping...")
-                            enqueueClose()
-                            return
+                        try {
+                            // Concurrent channel failure can invalidate key
+                            if (key.isValid && key.isAcceptable) {
+                                handleAcceptAndRegister(selector, key)
+                            } else if (key.isValid && key.isReadable) {
+                                handleReadAndRegister(selector, key)
+                            }
+                        } catch {
+                            case e: (CancelledKeyException | IOException) =>
+                                key.cancel()
+                                debugPrintln("Swallowing...")
+                                e.printStackTrace()
+                                handleException(addr)
+                            case e: Exception =>  // cf. ConcurrentModificationException
+                                println(debugToString("[ERROR] Caught unexpected..."))
+                                e.printStackTrace()
+                                println("[ERROR] Force stopping...")
+                                enqueueClose()
+                                return
+                        }
                     }
                 }
             }
         }
-        debugPrintln("stopped.")
+        debugPrintln("Stopped.")
     }
+
+    // ...rename handleAndRegister
+    // ...privatise selector => cf. registerWithSelector => record Actor ref per SocketChannel => end/fail method
+    // ...shutdown AP in terminating examples
 
     @throws[IOException]
     private def handleAcceptAndRegister(selector: Selector, key: SelectionKey): Unit = {

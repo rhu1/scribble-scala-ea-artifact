@@ -3,6 +3,8 @@ package tmp.EATmp.Proto10
 import ea.runtime.{Actor, Done, Session}
 import tmp.EATmp.Proto10
 
+import java.net.SocketAddress
+
 object TestProto10 {
 
     def main(args: Array[String]): Unit = {
@@ -34,7 +36,7 @@ object A extends Actor("MyA") with ActorA {
         p10.spawn(8888)
         Thread.sleep(1000)
 
-        //this.debug = true
+        this.debug = true
         spawn();
     }
 
@@ -44,7 +46,7 @@ object A extends Actor("MyA") with ActorA {
     }
 
     def a1(d: DataA, s: Proto10.A1): Done.type = {
-        registerA(7777, "localhost", 8888, DataA(), a1)
+        registerA(7777, "localhost", 8888, DataA(), a1)  // XXX what if init failure before here?
         println(s"(${s.sid}) A sending L1...")
         s.sendL1().suspend(d, a2)
     }
@@ -58,6 +60,10 @@ object A extends Actor("MyA") with ActorA {
                 s.sendL1().suspend(d, a2)
         }
     }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        println(s"Channel exception from: ${addr}")
+    }
 }
 
 
@@ -66,7 +72,7 @@ object A extends Actor("MyA") with ActorA {
 object B extends Actor("MyB") with Proto10.ActorB {
 
     def main(args: Array[String]): Unit = {
-        //this.debug = true
+        this.debug = true
         spawn();
     }
 
@@ -86,6 +92,10 @@ object B extends Actor("MyB") with Proto10.ActorB {
                 println(s"(${sid}) B sending L2...")
                 s.sendL2().suspend(d, b1)
         }
+    }
+
+    override def handleException(addr: SocketAddress): Unit = {
+        println(s"Channel exception from: ${addr}")
     }
 }
 
