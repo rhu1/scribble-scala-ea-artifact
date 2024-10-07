@@ -36,7 +36,7 @@ object A extends Actor("MyA") with ActorA {
         p10.spawn(8888)
         Thread.sleep(1000)
 
-        this.debug = true
+        //this.debug = true
         spawn();
     }
 
@@ -72,7 +72,7 @@ object A extends Actor("MyA") with ActorA {
 object B extends Actor("MyB") with Proto10.ActorB {
 
     def main(args: Array[String]): Unit = {
-        this.debug = true
+        //this.debug = true
         spawn();
     }
 

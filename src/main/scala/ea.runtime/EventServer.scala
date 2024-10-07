@@ -164,12 +164,14 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     val c = key.channel()
                     keys.remove()
                     if (key.isValid) {
-                        val addr = c match {
-                            case cc: SocketChannel => cc.getRemoteAddress
-                            case cc: ServerSocketChannel => cc.getLocalAddress // !!! FIXME
-                            case _ => throw new RuntimeException(s"TODO: ${c}")
-                        }
+                        var addr: SocketAddress = null // TODO Optional
                         try {
+                            addr = c match {
+                                case cc: SocketChannel => cc.getRemoteAddress
+                                case cc: ServerSocketChannel =>
+                                    InetSocketAddress("localhost", cc.socket().getLocalPort)
+                                case _ => throw new RuntimeException(s"TODO: ${c}")
+                            }
                             // Concurrent channel failure can invalidate key
                             if (key.isValid && key.isAcceptable) {
                                 handleAcceptAndRegister(selector, key)
@@ -177,14 +179,14 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                                 handleReadAndRegister(selector, key)
                             }
                         } catch {
-                            case e: (CancelledKeyException | IOException) =>
+                            case e: IOException =>
                                 key.cancel()
                                 debugPrintln("Swallowing...")
-                                e.printStackTrace()
+                                new Exception(e).printStackTrace()
                                 handleException(addr)
-                            case e: Exception =>  // cf. ConcurrentModificationException
+                            case e: Exception =>
                                 println(debugToString("[ERROR] Caught unexpected..."))
-                                e.printStackTrace()
+                                new Exception(e).printStackTrace()
                                 println("[ERROR] Force stopping...")
                                 enqueueClose()
                                 return
@@ -192,8 +194,8 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     }
                 }
             }
+            debugPrintln("Stopped.")
         }
-        debugPrintln("Stopped.")
     }
 
     // ...rename handleAndRegister
