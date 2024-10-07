@@ -145,6 +145,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         enqueueForSelectLoop(() => registerForPeersFoo(apHost, apPort, proto, r, port, d, g, peers))
     }*/
 
+    // cf. s.finish -- without close, e.g., ChatServer handling multiple clients
     @throws[IOException]
     def finishAndClose[A <: Actor](s: Session.End[A]): Done.type = {
         val done = s.finish()

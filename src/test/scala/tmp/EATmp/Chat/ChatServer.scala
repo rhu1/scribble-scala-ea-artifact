@@ -14,7 +14,7 @@ object TestChatServer {
         println("hello")
 
         val ap1 = new ChatProto1.ChatProto1
-        //proto3.debug = true
+        //ap1.debug = true
         ap1.spawn(9997)
 
         val server = new ChatServer("Server", 8888)
@@ -92,7 +92,8 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
                 val list = d.rooms.keySet.mkString("::")
                 s.sendRoomList(list).suspend(d, s1)
             case ChatProto1.ByeS(sid, x, s) =>
-                finishAndClose(s)
+                //finishAndClose(s)  // XXX
+                s.finish()
         }
     }
 
