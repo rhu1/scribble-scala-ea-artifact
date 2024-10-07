@@ -44,11 +44,13 @@ trait Room extends ChatProto2.ActorR with ChatProto3.ActorR {
 
 class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid) with Room {
 
+    val d = new DataR  // !!! thread through EventServer to keep local (so can provide to handleException)
+
     def spawn(): Unit = {
-        val d = new DataR
+        //val d = new DataR
         spawn(this.port)
         // !!! rename 2x registerR in API
-        registerR(this.port, "localhost", apPort+1, d, r3_1)  // ChatProto3.registerR
+        registerR(this.port, "localhost", apPort+1, this.d, r3_1)  // ChatProto3.registerR
     }
 
     def r3_1(d: DataR, s: ChatProto3.R1): Done.type = {
@@ -115,7 +117,14 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
         ....
     }*/
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         println(debugToString(s"Channel exception from: ${addr}"))
+        sid.foreach(x => {
+            if (x._1 == "ChatProto3") {
+                println(debugToString(s"Current out cache: ${this.d.out}"))
+                println(debugToString(s"GC ${x}"))
+                d.out -= x
+            }
+        })
     }
 }

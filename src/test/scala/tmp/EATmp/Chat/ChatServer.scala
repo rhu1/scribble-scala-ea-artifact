@@ -97,7 +97,7 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         println(s"Channel exception from: ${addr}")
     }
 }

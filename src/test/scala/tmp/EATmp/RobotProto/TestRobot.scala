@@ -77,7 +77,7 @@ class R(pid: String, val port: Net.Port) extends Actor(pid) with ActorR {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }
@@ -154,7 +154,7 @@ class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extend
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }
@@ -209,7 +209,7 @@ object W extends Actor("Warehouse") with ActorW {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }

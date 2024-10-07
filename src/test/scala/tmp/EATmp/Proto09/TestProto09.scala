@@ -48,7 +48,7 @@ object A extends Actor("MyA") with ActorA {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
        print(s"Channel exception from: ${addr}")
     }
 }
@@ -74,7 +74,7 @@ object B extends Actor("MyB") with Proto09.ActorB {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }

@@ -90,7 +90,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         this.sockets += c.getLocalAddress
     }
 
-    def handleException(addr: SocketAddress): Unit
+    def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit
 
     // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
@@ -165,11 +165,12 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     // cf. CancelledKey
                     // FIXME close should be enqueued?
                     val key = keys.next()
+                    val c = key.channel()
+                    val a = key.attachment()
                     keys.remove()
                     if (key.isValid) {
                         var addr: SocketAddress = null // TODO Optional
                         try {
-                            val c = key.channel()
                             addr = c match {
                                 case cc: SocketChannel => cc.getRemoteAddress
                                 case cc: ServerSocketChannel =>
@@ -187,7 +188,11 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                                 key.cancel()
                                 debugPrintln("Swallowing...")
                                 new Exception(e).printStackTrace()
-                                handleException(addr)
+                                val opt = a match {
+                                    case null => None
+                                    case _ => Some(a.asInstanceOf[Session.Sid])
+                                }
+                                handleException(addr, opt)
                             case e: Exception =>
                                 errPrintln(debugToString("Caught unexpected..."))
                                 new Exception(e).printStackTrace()

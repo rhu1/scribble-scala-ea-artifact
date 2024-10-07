@@ -177,7 +177,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         val msg1 = s"CONNECT_${sid._1}_${sid._2}_${rr}_${rrr}_${iota}"
         write(sSocket, msg1)
 
-        sSocket.register(selector, SelectionKey.OP_READ)
+        sSocket.register(selector, SelectionKey.OP_READ, sid)
         //registerWithSelector(sSocket, SelectionKey.OP_READ)
         this.sockets((sid, rrr)) = sSocket
         debugPrintln(s"Connected Actor: sid=${sid}, host=${host}:${port}")
@@ -234,11 +234,13 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
     //val canRun = Promise[Unit]()
 
     @throws[IOException]
+    //@throws[SessionException]
     override def handleReadAndRegister(client: SocketChannel, selector: Selector, msg: String): Unit = {
-        {
-            val i = msg.indexOf('_')  // HEADER_...
-            val kind = msg.substring(0, i)
+        val i = msg.indexOf('_')  // HEADER_...
+        val kind = msg.substring(0, i)
+        var sid: Session.Sid = null
 
+        //try {
             if (kind == "APCLIENT") {
                 // AP_Global_Int_host_port
                 val jj = msg.indexOf('_', i + 1)
@@ -249,15 +251,15 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 val lll = msg.indexOf('_', ll + 1)
                 val llll = msg.indexOf('_', lll + 1)
                 val iota = msg.substring(i + 1, jj)
-                val sid = (msg.substring(jj + 1, j), msg.substring(j + 1, k).toInt)
-                val rr = msg.substring(k+1, l)
+                sid = (msg.substring(jj + 1, j), msg.substring(j + 1, k).toInt)
+                val rr = msg.substring(k + 1, l)
 
                 //val rrr = msg.substring(l+1, ll)
                 //val host = msg.substring(ll + 1, lll)
                 //val port = msg.substring(lll + 1).toInt
                 //val iotarrr = msg.substring(llll + 1).toInt
                 //println(debugToString(s"Parsed ${kind}: i=${iota}, sid=${sid}, rr=${rr}, rrr=${rrr}@host=${host}:${port}"))
-                val list = msg.substring(l+1)
+                val list = msg.substring(l + 1)
                 debugPrintln(s"Parsed ${kind}: i=${iota}, sid=${sid}, rr=${rr}, list=${list}")
 
                 val it = list.split("_").iterator
@@ -267,7 +269,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                     val host = it.next()
                     val port = it.next().toInt
                     val iotarrr = it.next
-                    if (rrr >= rr) {  // !!!
+                    if (rrr >= rr) { // !!!
                     } else {
                         // connect to all lower; set each lower promise
                         doConnect(rr, host, port, sid, rrr, selector, iotarrr)
@@ -279,7 +281,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
                 // wait on all promises in order  // !!!
                 //Future {
-                    /*for ((r1, p) <- this.initSync(iota)) {
+                /*for ((r1, p) <- this.initSync(iota)) {
                         val ff = p.future
                         Await.ready(ff, Duration.Inf)
                     }
@@ -288,7 +290,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                     println(debugToString(s"All connected: ${this.initSync(iota)}"))
                     this.canRun.success()*/
 
-                    //HERE maybe make serversocket accept in its own event loop separate from "main" actor? -- whole init needs to be, main actor just needs init event
+                //HERE maybe make serversocket accept in its own event loop separate from "main" actor? -- whole init needs to be, main actor just needs init event
 
                 //}
 
@@ -308,19 +310,20 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
                 //client.close()
 
-            }*/ else if (kind == "CONNECT") {
+            }*/
+            else if (kind == "CONNECT") {
                 val j = msg.indexOf('_', i + 1)
                 val k = msg.indexOf('_', j + 1)
                 val l = msg.indexOf('_', k + 1)
                 val ll = msg.indexOf('_', l + 1)
-                val sid = (msg.substring(i + 1, j), msg.substring(j + 1, k).toInt)
+                sid = (msg.substring(i + 1, j), msg.substring(j + 1, k).toInt)
                 val rrr = msg.substring(k + 1, l)
                 val rr = msg.substring(l + 1, ll)
                 val iota = msg.substring(ll + 1)
                 debugPrintln(s"Parsed ${kind}: sid=${sid}, rrr=${rrr}, iota=${iota}")
 
                 // handle CONNECT
-                client.register(selector, SelectionKey.OP_READ)
+                client.register(selector, SelectionKey.OP_READ, sid)
                 this.sockets((sid, rrr)) = client
                 ////dispatchHandler(sid)
                 // set promise
@@ -336,14 +339,14 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
                 //val msg = s"APDONE_${sid._1}_${sid._2}_${rr}_${iota}"
                 val split = msg.split("_")
-                val sid = (split(1), split(2).toInt)
+                sid = (split(1), split(2).toInt)
                 val rr = split(3)
                 val iota = split(4)
                 debugPrintln(s"Parsed: op=${kind} sid=${sid} rr=${rr} iota=${iota}")
 
                 //catching(classOf[IOException]).opt(this.initSync(iota)._2.close())  // same as `client`
                 this.initSync -= iota
-                client.close()  // AP client conn is per registerAP, i.e., separate for each session, and also for each role (in same session)
+                client.close() // AP client conn is per registerAP, i.e., separate for each session, and also for each role (in same session)
 
                 // XXX sess msg could arrive before APDONE
                 val rs = this.active.getOrElseUpdate(sid, collection.mutable.Set())
@@ -357,7 +360,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 val l = msg.indexOf('_', k + 1)
                 val ll = msg.indexOf('_', l + 1)
                 val lll = msg.indexOf('_', ll + 1)
-                val sid = (msg.substring(i + 1, j), msg.substring(j + 1, k).toInt)
+                sid = (msg.substring(i + 1, j), msg.substring(j + 1, k).toInt)
                 val src = msg.substring(k + 1, l)
                 val rr = msg.substring(l + 1, ll)
                 val op = msg.substring(ll + 1, lll)
@@ -366,24 +369,24 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 /*// !!! FIXME HERE deserialize pay (currently hardcoded String)
                 val tuple = deserialise(msg.substring(i+1))
                 val (p: Session.Global, id: Int, src: Session.Role, rr: Session.Role, op: String, pay: List[Object]) = tuple
-                val sid = (p, id)*/
+                sid = (p, id)*/
 
                 debugPrintln(s"Parsed session receive: sid=${sid}, src=${src}, rr=${rr}, op=${op}, pay=${pay}")
 
                 // handle SEND
-                client.register(selector, SelectionKey.OP_READ)
+                client.register(selector, SelectionKey.OP_READ, sid)
 
                 dispatchHandler(sid, rr, src, op, pay)
                 //dispatchHandlerFoo(sid, rr, src, op, pay)
 
-            } else if (kind == "HEY") {  // Could batch with APCLIENT ?
+            } else if (kind == "HEY") { // Could batch with APCLIENT ?
 
                 val apSocket = client
                 val mm = msg
                 val split = mm.split("_")
 
                 val p = split(1)
-                val index = split(2).toInt  // sid index
+                val index = split(2).toInt // sid index
                 /*if (p != proto) {
                     errPrintln(debugToString(s"Proto mismatch: expected=${proto}, got=${p}"))
                     sys.exit(1)
@@ -392,17 +395,24 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 val iota = split(4)
 
                 val f = this.initSync(iota)._3
-                val sid = (p, index)
+                sid = (p, index)
                 val g = () => f.apply(sid)
                 setInitHandler(sid, rr, g)
 
-                apSocket.register(selector, SelectionKey.OP_READ)
+                apSocket.register(selector, SelectionKey.OP_READ, sid)
                 //registerWithSelector(apSocket, SelectionKey.OP_READ)
 
             } else {
                 errPrintln(s"Unknown kind: ${kind}")
             }
-        }
+        /*} catch {
+            case e: IOException =>
+                if (sid != null) {
+                    throw SessionException(cause=e)
+                } else {
+                    throw e
+                }
+        }*/
     }
 
     def checkIotaDone(client: SocketChannel, iota: Net.Liota, sid: Session.Sid, rr: Session.Role, selector: Selector): Unit = {

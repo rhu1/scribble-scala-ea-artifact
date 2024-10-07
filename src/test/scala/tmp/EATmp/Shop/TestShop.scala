@@ -90,7 +90,7 @@ object C extends Actor("Customer") with ActorC {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }
@@ -213,7 +213,7 @@ object S extends Actor("Shop") with SS {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }
@@ -243,7 +243,7 @@ object SF extends Actor("Staff") with ShopProto2.ActorSF {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }
@@ -277,7 +277,7 @@ object P extends Actor("PaymentProcessor") with ActorP {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }

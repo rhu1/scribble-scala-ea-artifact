@@ -188,7 +188,7 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = { }
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = { }
 
     /* ... */
 

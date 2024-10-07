@@ -46,7 +46,7 @@ object A extends Actor("MyA") with ActorA {
         finishAndClose(s.sendL1(s"abc"))
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }
@@ -76,7 +76,7 @@ object B extends Actor("MyB") with ActorB {
         }
     }
 
-    override def handleException(addr: SocketAddress): Unit = {
+    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
         print(s"Channel exception from: ${addr}")
     }
 }

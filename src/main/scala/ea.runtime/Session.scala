@@ -137,3 +137,12 @@ object Session {
     }
 
 }
+
+//class SessionException(msg: String = null, cause: Throwable = null) extends Exception
+
+/*object SessionException {
+    def defaultMessage(message: String, cause: Throwable) =
+        if (message != null) message
+        else if (cause != null) cause.toString()
+        else null
+}*/
