@@ -176,15 +176,12 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                             e.printStackTrace()
                             return
 
-                        case e: ConcurrentModificationException =>
-                            println(debugToString("[ERROR] Caught..."))
+                        case e: Exception =>  // cf. ConcurrentModificationException
+                            println(debugToString("[ERROR] Caught unexpected..."))
                             e.printStackTrace()
-                            //close()
                             println("[ERROR] Force stopping...")
                             enqueueClose()
                             return
-
-                        //default x =>
                     }
                 }
             }
