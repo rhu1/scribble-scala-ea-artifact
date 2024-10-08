@@ -119,9 +119,12 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
         ....
     }*/
 
-    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
-        println(debugToString(s"Channel exception from: ${addr}"))
-        sid.foreach(x => {
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
+        sid.map(x => {
             if (x._1 == "ChatProto3") {
                 println(debugToString(s"Current out cache: ${this.d.out}"))
                 println(debugToString(s"GC ${x}"))

@@ -61,8 +61,11 @@ object A extends Actor("MyA") with ActorA {
         }
     }
 
-    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
-        println(s"Channel exception from: ${addr}")
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
     }
 }
 
@@ -94,8 +97,11 @@ object B extends Actor("MyB") with Proto10.ActorB {
         }
     }
 
-    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
-        println(s"Channel exception from: ${addr}")
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
     }
 }
 

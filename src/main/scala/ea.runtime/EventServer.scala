@@ -90,7 +90,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         this.sockets += c.getLocalAddress
     }
 
-    def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit
+    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit
 
     // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
@@ -158,6 +158,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                 selector.select()
 
                 debugPrintln(s"...selected: ${selector.selectedKeys.toString}")
+                // key has Sid attachment if any
                 val keys = selector.selectedKeys.iterator
                 while (keys.hasNext) {
 
@@ -169,13 +170,12 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                     val a = key.attachment()
                     keys.remove()
                     if (key.isValid) {
-                        var addr: SocketAddress = null // TODO Optional
+                        var addr: Option[SocketAddress] = None
                         try {
                             addr = c match {
-                                case cc: SocketChannel => cc.getRemoteAddress
-                                case cc: ServerSocketChannel =>
-                                    InetSocketAddress("localhost", cc.socket().getLocalPort)
-                                case _ => throw new RuntimeException(s"TODO: ${c}")
+                                case cc: SocketChannel => Some(cc.getRemoteAddress)
+                                //case cc: ServerSocketChannel => InetSocketAddress("localhost", cc.socket().getLocalPort)
+                                case _ => None
                             }
                             // Concurrent channel failure can invalidate key
                             if (key.isValid && key.isAcceptable) {
@@ -189,10 +189,10 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                                 debugPrintln("Swallowing...")
                                 if (this.debug) { new Exception(e).printStackTrace() }
                                 val opt = a match {
-                                    case null => None
-                                    case _ => Some(a.asInstanceOf[Session.Sid])
+                                    case x: Session.Sid => Some(x)
+                                    case _ => None
                                 }
-                                handleException(addr, opt)
+                                handleException(e, addr, opt)
                             case e: Exception =>
                                 errPrintln(debugToString("Caught unexpected..."))
                                 new Exception(e).printStackTrace()

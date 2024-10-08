@@ -162,8 +162,11 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
         timer(d)
     }
 
-    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
-        println(s"Channel exception from: ${addr}")
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
     }
 
 }

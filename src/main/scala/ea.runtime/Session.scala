@@ -120,7 +120,7 @@ object Session {
                 hack.actor.end(hack.sid, hack.role)
                 hack.actor.debugPrintln(s"become ${hack.sid}(${hack.role}) swallowing...")
                 new Exception(e).printStackTrace()
-                hack.actor.handleException(..., Some(hack.sid))
+                hack.actor.handleException(e, None, Some(hack.sid))  // also pass the exception
                 Done  // FIXME ?
             case e: Exception =>
                 hack.actor.errPrintln(hack.actor.debugToString("Caught unexpected..."))

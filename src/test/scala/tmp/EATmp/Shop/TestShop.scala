@@ -90,8 +90,11 @@ object C extends Actor("Customer") with ActorC {
         }
     }
 
-    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
-        print(s"Channel exception from: ${addr}")
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
     }
 }
 
@@ -213,8 +216,11 @@ object S extends Actor("Shop") with SS {
         }
     }
 
-    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
-        print(s"Channel exception from: ${addr}")
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
     }
 }
 
@@ -243,8 +249,11 @@ object SF extends Actor("Staff") with ShopProto2.ActorSF {
         }
     }
 
-    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
-        print(s"Channel exception from: ${addr}")
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
     }
 }
 
@@ -277,8 +286,11 @@ object P extends Actor("PaymentProcessor") with ActorP {
         }
     }
 
-    override def handleException(addr: SocketAddress, sid: Option[Session.Sid]): Unit = {
-        print(s"Channel exception from: ${addr}")
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
     }
 }
 
