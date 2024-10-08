@@ -3,8 +3,11 @@ package tmp.EATmp.Proto01
 import ea.runtime.{Actor, Done, Session}
 
 import java.net.SocketAddress
+import java.util.concurrent.LinkedTransferQueue
 
 object TestProto01 {
+
+    val c: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
         println("Hello")
@@ -16,13 +19,20 @@ object TestProto01 {
 
         //val proto1 = new AP("Proto1", Set("A", "B"))
         val p1 = new Proto01
+        p1.debug = true
         p1.spawn(8888)
         Thread.sleep(1000)
 
         A.debug = true
         B.debug = true
 
-        A.spawn(); B.spawn()
+        A.spawn()
+        B.spawn()
+
+        println(c.take())
+        println(c.take())
+        p1.close()
+        Thread.sleep(500)
     }
 }
 
@@ -43,13 +53,15 @@ object A extends Actor("MyA") with ActorA {
     def a1(d: DataA, s: A1): Done.type = {
         //Done  // testing linearity
         //s.sendL1(s"abc")  // testing linearity
-        finishAndClose(s.sendL1(s"abc"))
+        val done = finishAndClose(s.sendL1(s"abc"))
+        TestProto01.c.add("A")
+        done
     }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: ${a} ${s}")
+        println(s"Channel exception: $a $s")
         cause.printStackTrace()
     }
 }
@@ -75,14 +87,16 @@ object B extends Actor("MyB") with ActorB {
         s match {
             case L1B(sid, role, x, s) =>
                 //Done  // testing linearity
-                finishAndClose(s)
+                val done = finishAndClose(s)
+                TestProto01.c.add("B")
+                done
         }
     }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: ${a} ${s}")
+        println(s"Channel exception: $a $s")
         cause.printStackTrace()
     }
 }

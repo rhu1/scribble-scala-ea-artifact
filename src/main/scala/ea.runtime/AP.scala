@@ -39,6 +39,10 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
 
     //def acceptAndRegister(selector: Selector, key: SelectionKey): Option[SocketChannel] = {}
 
+    def close(): Unit = {
+        enqueueClose()
+    }
+
     @throws[IOException]
     override def handleReadAndRegister(client: SocketChannel, selector: Selector, msg: String): Unit = {
         val socket = client
