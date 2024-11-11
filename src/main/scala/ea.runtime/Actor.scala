@@ -65,7 +65,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
     // For sessions (not APs) -- !!! Actor abstraction could play multiple roles in same session (but Init disallows it)
     val active = collection.mutable.Map[(Session.Sid), collection.mutable.Set[Session.Role]]()
-    val sockets = collection.mutable.Map[(Session.Sid, Session.Role), SocketChannel]()
+    val sockets = collection.mutable.Map[(Session.Sid, Session.Role), SocketChannel]()  // Role is peer
 
     // sid, self role (dst), peer role (src)
     val queues = collection.mutable.Map[(Session.Sid, Session.Role, Session.Role), ListBuffer[String]]()
@@ -183,7 +183,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         debugPrintln(s"Connected Actor: sid=${sid}, host=${host}:${port}")
     }
 
-    // r is self -- need to close conns to all other r's
+    // r is self -- need to close conns to all _other_ r's
     def end(sid: Session.Sid, r: Session.Role): Unit = {
         debugPrintln(s"Ending ${sid}[${r}]...")
         if (this.initHandlers.contains((sid, r))) {
@@ -191,19 +191,25 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
             this.initHandlers -= ((sid, r))
         }
 
-        val filt = this.handlers.filter(x => x._1._1 == sid && x._1._2 == r)
+        val filt = this.handlers.filter(x => x._1._1 == sid && x._1._2 == r)  // x._1 == (sid, r) ?
         if (this.initHandlers.contains((sid, r))
             || filt.nonEmpty) {
             errPrintln(s"[WARNING] ending session for ${r} but handlers non-empty: ${sid}")
             filt.foreach(x => this.handlers -= x._1)
         }
         this.active(sid) -= r
-        //catching(classOf[IOException]).opt(this.sockets(sid, r).close())  // XXX r is self, not peers
-        if (this.active(sid).isEmpty) {
+
+        //catching(classOf[IOException]).opt(this.sockets(sid, r).close())  // XXX !!! r is self, not peers
+        if (this.active(sid).isEmpty) {  // FIXME self comm? (multi role in same sess) -- XXX isEmpty guard can race condition with other role inits?
             this.sockets.filter(_._1._1 == sid).foreach(x => {
+                // FIXME doesn't actually remove the sockets?...
+                // FIXME ending one side (too early) can close all conns and break self comm? cf. TestProto01a ...
+                // ... need to only close when all roles ended, but currently "all roles" unknown, leave to manual finishAndClose? ...
+                // ... FIXME if so need Acotr.enqueueClose to override EventServer.enqueueClose to close all sockets ...
                 catching(classOf[IOException]).opt(x._2.close())
             })
         }
+
         debugPrintln(s"...ended: ${sid}[${r}]")
     }
 

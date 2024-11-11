@@ -94,7 +94,8 @@ abstract class EventServer(val name: String) extends DebugPrinter {
 
     // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
-    private[runtime] def enqueueClose(): Unit = {
+    //private[runtime]
+    def enqueueClose(): Unit = {
         enqueueForSelectLoop(() => {
             debugPrintln("Stopping...")
             this.isSelecting = false
