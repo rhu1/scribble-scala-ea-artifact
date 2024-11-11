@@ -1,6 +1,6 @@
 package ea.runtime
 
-import java.io.IOException
+import java.io.{EOFException, IOException}
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.ByteBuffer
 import java.nio.channels.*
@@ -228,8 +228,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         if (opt.isEmpty) {
             //if (r == -1) { //|| new String(buffer.array).trim == POISON_PILL) {
             client.close() // CHECKME: this.close ?
-            debugPrintln("Not accepting client messages anymore")
-
+            debugPrintln("Not accepting client messages anymore...")
         } else {
             val ms = opt
             ms.foreach(x => handleReadAndRegister(client, selector, x))
@@ -303,11 +302,13 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         val k = c.getRemoteAddress().toString
         val buffer = this.buffers.getOrElseUpdate(k, ByteBuffer.allocate(2048))  // !!!
         val r = c.read(buffer)
-        if (r == -1) {  // !!! CHECKME cf. above getRemoteAddress -- cf. getLocalAddress ?
+        if (r == -1) { // !!! CHECKME cf. above getRemoteAddress -- cf. getLocalAddress ?
             this.buffers -= k
-            debugPrintln(s"Read EOF; closed ${k}")
+            debugPrintln(s"Read EOF; closing ${k}...")
             c.close()
+
             return Seq()
+            //throw new EOFException(s"Read EOF; closed ${k}")
         }
 
         debugPrintln(s"Read from ${k} ${buffer.position()} bytes...")

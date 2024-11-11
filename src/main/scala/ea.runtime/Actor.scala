@@ -633,8 +633,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
     // self = dst, peer = src
     def dispatchHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, op: String, pay: String): Unit = {
     //def dispatchHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, op: String, pay: List[Object]): Unit = {
-
-            if (!this.handlers.contains((sid, self, peer))) {
+        if (!this.handlers.contains((sid, self, peer))) {
             val q = this.queues.getOrElseUpdate((sid, self, peer), ListBuffer())
             q += s"${op}__${pay}"
             //q += ((op, pay))
