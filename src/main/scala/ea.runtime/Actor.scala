@@ -206,7 +206,10 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 // FIXME ending one side (too early) can close all conns and break self comm? cf. TestProto01a ...
                 // ... need to only close when all roles ended, but currently "all roles" unknown, leave to manual finishAndClose? ...
                 // ... FIXME if so need Acotr.enqueueClose to override EventServer.enqueueClose to close all sockets ...
+
+                // !!! stops self comm actors from terminating
                 catching(classOf[IOException]).opt(x._2.close())
+
             })
         }
 
@@ -608,8 +611,14 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 val h = q.head
                 this.queues((sid, self, peer)) = q.tail
                 val split = h.split("__")
+
+                println(s"\nbaaa ${h}\n")
+
                 val op = split(0)
-                val pay = split(1)
+
+                //val pay = split(1)
+                val pay = if (split.length > 1) { split(1) } else { "" }  // cf. msg.substring in handleReadAndRegister (e.g. SEND case) works for empty pay
+
                 /*val op = h._1
                 val pay = h._2*/
 

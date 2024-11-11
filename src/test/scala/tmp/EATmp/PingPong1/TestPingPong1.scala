@@ -67,7 +67,7 @@ object C extends Actor("MyC") with ActorC {
     }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        TestPingPong1.c.add("C")
+        //TestPingPong1.c.add("C")
 
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
@@ -113,7 +113,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger {
     }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        TestPingPong1.c.add("Pinger")
+        //TestPingPong1.c.add("Pinger")
 
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
@@ -153,7 +153,7 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
     }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        TestPingPong1.c.add("PongReceiver")
+        //TestPingPong1.c.add("PongReceiver")
 
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
