@@ -612,8 +612,6 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
                 this.queues((sid, self, peer)) = q.tail
                 val split = h.split("__")
 
-                println(s"\nbaaa ${h}\n")
-
                 val op = split(0)
 
                 //val pay = split(1)

@@ -5,6 +5,7 @@ import tmp.EATmp.Proto10
 
 import java.net.SocketAddress
 
+// !!! run A/B separately to test failure handling (n.b. A has the AP)
 object TestProto10 {
 
     def main(args: Array[String]): Unit = {
