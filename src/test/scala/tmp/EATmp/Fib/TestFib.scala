@@ -87,6 +87,7 @@ object M extends Actor("MyM") with Fib1.ActorP {
 
 /* ... */
 
+// FIXME need distributed port allocation
 object Ports {
     // cf. AtomicInteger
     var ports = 4444;
@@ -121,7 +122,10 @@ object F extends Actor("MyF") with Fib1.ActorC with Fib2.ActorP {
                 val done = if (d.reqx <= 2) {
                     s.sendResponse(1).finish()
                 } else {
-                    // !!! cf. freeze s?
+
+                    // freeze s -- !!! cf. just do inline input? (i.e., Fib2 Response) -- same guarantees as freeze/become? -- XXX would need to spawn parallel actor (as this event loop would be blocked) and do out-of-band input, e.g., local chan
+                    // !!! revisit "callback stack" idea ?
+
                     val (f, done) = freeze(s, (sid, r, a) => Fib1.C2(sid, r, a))
                     d.c2 = f
 
