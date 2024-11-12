@@ -62,7 +62,8 @@ object M extends Actor("MyM") with Fib1.ActorP {
         // 1 1 2 3 5 8 13
         //s.sendRequest(2).suspend(d, m2)
         //s.sendRequest(3).suspend(d, m2)
-        s.sendRequest(7).suspend(d, m2)
+        //s.sendRequest(7).suspend(d, m2)
+        s.sendRequest(10).suspend(d, m2)  // 55
     }
     
     def m2(d: DataA, s: Fib1.P2): Done.type = {
