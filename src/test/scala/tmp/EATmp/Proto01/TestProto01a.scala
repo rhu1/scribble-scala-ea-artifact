@@ -41,8 +41,9 @@ object AB extends Actor("MyAB") with ActorA with ActorB {
 
     def spawn(): Unit = {
         spawn(7777)
-        registerA(7777, "localhost", 8888, DataAa(), a1)  // !!! mutable data
-        registerB(7777, "localhost", 8888, DataBa(), b1Init)  // !!! mutable data
+        // testing self comm in same session
+        registerA(7777, "localhost", 8888, DataAa(), a1)
+        registerB(7777, "localhost", 8888, DataBa(), b1Init)
     }
 
     def a1(d: DataAa, s: A1): Done.type = {

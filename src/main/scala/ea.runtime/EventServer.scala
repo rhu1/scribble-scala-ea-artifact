@@ -259,7 +259,8 @@ abstract class EventServer(val name: String) extends DebugPrinter {
 
     @throws[IOException]
     private def connect(host: Net.Host, port: Net.Port): SocketChannel = {
-        //println(s"${name} connecting... ${port}")
+        println(s"${name} connecting... ${port}")
+        debugPrintln(s"${name} connecting... ${port}")
         val sSocket = SocketChannel.open(new InetSocketAddress(host, port))
         sSocket.configureBlocking(false)
         debugPrintln(s"Connected Actor: ${sSocket.getRemoteAddress()}")

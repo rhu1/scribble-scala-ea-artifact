@@ -113,11 +113,12 @@ class DataS(val stock: collection.mutable.Map[String, (Int, Int)]) extends Sessi
     var oos: String = ""
 }
 
-trait SS extends ActorS with ShopProto2.ActorSS
+//trait SS extends ActorS with ShopProto2.ActorSS
+//object S extends Actor("Shop") with SS {
 
-object S extends Actor("Shop") with SS {
+object S extends Actor("Shop") with ActorS with ShopProto2.ActorSS {
 
-    val port = 6666
+val port = 6666
 
     def spawn(): Unit = {
         val stock = collection.mutable.Map[String, (Int, Int)](

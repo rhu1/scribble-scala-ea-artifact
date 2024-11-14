@@ -168,8 +168,8 @@ object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionM
             f.finish()
         } else {
             d.x = d.x - 1
-            // freeze
             val s1 = s.sendPing()
+            // freeze
             val (a, done) = Session.freeze(s1,
                 (sid: Session.Sid, role: Session.Role, a: Actor) => PingDecisionMaker1(sid, role, a))
             d.m1 = a
