@@ -214,7 +214,9 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
                 // become Sieve2.F and send Exit
                 localPrimes.foreach(x => print(s"${x} "))
                 d.f2 match {
-                    case _: Session.LinNone => throw new RuntimeException("missing frozen")  HERE resuspend if no conn yet
+                    case _: Session.LinNone =>
+                        println(s"aaaaaaaa: $hasNext")
+                        throw new RuntimeException("missing frozen")
                     case y: Session.LinSome[Sieve2.F2] =>
                         become(d, y, exit)
                 }
@@ -237,11 +239,17 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
 
                 println(s"F1 locallyPrime ${x} ${isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)}")
                 if (isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)) {
-                    if (hasNext) {
+                    if (hasNext) {  // HERE should be "next ready"
                         println(s"F1 should pass ${x}...")
                         // become
                         d.f2 match {
-                            case _: Session.LinNone => throw new RuntimeException("missing frozen")
+                            case _: Session.LinNone =>
+                                println(s"bbbbbbb ${x}")
+                                // HERE "resuspend" if no conn yet XXX
+                                // - add next connected ACK to proto2, cf. hasNext -> nextReady
+                                // - if !nextReady and !storeLocally -> if !spawned do spawn else buffer for register next -- in register send all buffered
+                                // !!! because of inline become? cf. async become would fire when registered -- !!! CHECKME registering multiple becomes?
+                                throw new RuntimeException("missing frozen")  // HERE add exception to other examples
                             case y: Session.LinSome[Sieve2.F2] =>
                                 println(s"F1 passing ${x}")
                                 d.x = x
@@ -283,7 +291,9 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
         }
     }
 
+    // !!! register is event-driven, so this cannot be done inline with F spawning
     def f1(d: DataC, s: Sieve2.F1): Done.type = {
+        println(s"F1 sending new prime ${d.newPrime}")
         val s2 = s.sendNewPrime(d.newPrime)
         val (a, done) = freeze(s2, (sid, r, a) => Sieve2.F2(sid, r, a))
         d.f2 = a
@@ -313,7 +323,7 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with S
     def main(args: Array[String]): Unit = {
         spawn(port)
         registerFnext(port, "localhost", aport, DataD(), n1Init)
-        println(s"F aaa ${aport}")
+        println(s"F aport ${aport}")
     }
 
     def n1Init(d: DataD, s: Sieve2.Fnext1Suspend): Done.type = {
