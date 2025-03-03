@@ -26,9 +26,9 @@ object TestHello {
         A.spawn();
         B.spawn()
 
-        println(s"Closed: ${shutdown.take()}")
-        println(s"Closed: ${shutdown.take()}")
-
+        println(s"Closed ${shutdown.take()}.")
+        println(s"Closed ${shutdown.take()}.")
+        println(s"Closing ${ap_hello.nameToString()}...")
         ap_hello.close()
     }
 }
