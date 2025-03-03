@@ -6,225 +6,226 @@ import ea.runtime.{Actor, Done, Session}
 import java.net.SocketAddress
 import java.util.concurrent.LinkedTransferQueue
 
-object TestPingPong1 {
+object TestPing {
 
-    val c: LinkedTransferQueue[String] = LinkedTransferQueue()
+    val PORT_Proto1 = 8888
+    val PORT_C = 5555;
+    val PORT_Pinger = 6666;
+    val PORT_PongReceiver = 7777;
+    val PORT_Ponger = 9999;
+
+    val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
-        println("Hello")
+        val ap_Proto1 = new Proto1
+        //ap_Proto1.debug = true
+        ap_Proto1.spawn(PORT_Proto1)
 
-        val p1 = new Proto1
-        p1.debug = true
-        p1.spawn(8888)
-        Thread.sleep(1000)
+        Thread.sleep(500)
 
-        C.debug = true
-        Pinger.debug = true
-        PongReceiver.debug = true
-        Ponger.debug = true
-
+        //C.debug = true
+        //Pinger.debug = true
+        //PongReceiver.debug = true
+        //Ponger.debug = true
         PongReceiver.spawn()
         Ponger.spawn()
         Pinger.spawn()
         C.spawn()
 
-        println(s"1: ${c.take()}")
-        println(s"2: ${c.take()}")
-        println(s"3: ${c.take()}")
-        println(s"4: ${c.take()}")
-        p1.close()
-        Thread.sleep(500)
+        println(s"Closed ${shutdown.take()}")
+        println(s"Closed ${shutdown.take()}")
+        println(s"Closed ${shutdown.take()}")
+        println(s"Closed ${shutdown.take()}")
+        println(s"Closing ${ap_Proto1.nameToString()}...")
+        ap_Proto1.close()
+    }
+
+    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: $a $s")
+        cause.printStackTrace()
     }
 }
 
 
-case class DataA() extends Session.Data
-case class DataB(var x: Int) extends Session.Data
-case class DataC() extends Session.Data
-case class DataD() extends Session.Data
 
 
 /* ... */
+
+
+case class Data_C() extends Session.Data
+
 
 object C extends Actor("MyC") with ActorC {
 
     def spawn(): Unit = {
-        spawn(5555)
-        registerC(5555, "localhost", 8888, DataA(), c1)
+        this.spawn(TestPing.PORT_C)
+        this.registerC(TestPing.PORT_C, "localhost", TestPing.PORT_Proto1, Data_C(), c1)
     }
 
-    def c1(d: DataA, s: C1): Done.type = {
+    def c1(d: Data_C, s: C1): Done.type = {
         s.sendStart().suspend(d, c2)
     }
 
-    def c2(d: DataA, s: C2): Done.type = {
+    def c2(d: Data_C, s: C2): Done.type = {
         s match {
             case StopC(sid, role, s) =>
-                TestPingPong1.c.add("C")  // finishAndClose can throw IOException
-                Thread.sleep(500)
-                val done = finishAndClose(s)
-                done
+                this.finishAndClose(s)
         }
     }
 
-    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        //TestPingPong1.c.add("C")
+    override def afterClosed(): Unit = {
+        TestPing.shutdown.add(this.pid)
+    }
 
-        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
-        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: $a $s")
-        cause.printStackTrace()
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        TestPing.handleException(cause, addr, sid)
     }
 }
 
 
 /* ... */
+
+case class Data_Pinger() extends Session.Data
 
 object Pinger extends Actor("MyPinger") with ActorPinger {
 
     def spawn(): Unit = {
-        spawn(6666)
-        registerPinger(6666, "localhost", 8888, DataC(), pingerInit)
+        this.spawn(TestPing.PORT_Pinger)
+        this.registerPinger(TestPing.PORT_Pinger, "localhost", TestPing.PORT_Proto1, Data_Pinger(), pingerInit)
     }
 
-    def pingerInit(d: DataC, s: Pinger1Suspend): Done.type = {
+    def pingerInit(d: Data_Pinger, s: Pinger1Suspend): Done.type = {
         s.suspend(d, pinger1)
     }
 
-    def pinger1(d: DataC, s: Pinger1): Done.type = {
+    def pinger1(d: Data_Pinger, s: Pinger1): Done.type = {
         s match {
             case StartPinger(sid, role, s) =>
+                println(s"${nameToString()} received Start")
                 s.sendPing0().suspend(d, pinger3)
         }
     }
 
-    def pinger3(d: DataC, s: Pinger3): Done.type = {
+    def pinger3(d: Data_Pinger, s: Pinger3): Done.type = {
         s match {
             case PingCPinger(sid, role, s) =>
+                println(s"${nameToString()} received PingC")
                 s.sendPing().suspend(d, pinger3)
             case StopPinger(sid, role, s) =>
-                val f = s.sendStop().sendStop()
-
-                println("\nSTOP\n")
-
-                TestPingPong1.c.add("Pinger")
-                Thread.sleep(500)
-                finishAndClose(f)
+                val end = s.sendStop().sendStop()
+                //println("\nSTOP\n")
+                this.finishAndClose(end)
         }
     }
 
-    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        //TestPingPong1.c.add("Pinger")
+    override def afterClosed(): Unit = {
+        TestPing.shutdown.add(this.pid)
+    }
 
-        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
-        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: $a $s")
-        cause.printStackTrace()
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        TestPing.handleException(cause, addr, sid)
     }
 }
 
 
 /* ... */
+
+case class Data_Receiver(var x: Int) extends Session.Data
 
 object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
 
+    val repeats = 2
+
     def spawn(): Unit = {
-        spawn(7777)
-        registerPongReceiver(7777, "localhost", 8888, DataB(2), pongReceiverInit)
+        this.spawn(TestPing.PORT_PongReceiver)
+        this.registerPongReceiver(TestPing.PORT_PongReceiver, "localhost",
+            TestPing.PORT_Proto1, Data_Receiver(repeats), pongReceiverInit)
     }
 
-    def pongReceiverInit(d: DataB, s: PongReceiver1Suspend): Done.type = {
+    def pongReceiverInit(d: Data_Receiver, s: PongReceiver1Suspend): Done.type = {
         s.suspend(d, pongReceiver1)
     }
 
-    def pongReceiver1(d: DataB, s: PongReceiver1): Done.type = {
+    def pongReceiver1(d: Data_Receiver, s: PongReceiver1): Done.type = {
         s match {
             case Pong0PongReceiver(sid, role, s) =>
+                println(s"${nameToString()} received Pong0")
                 if (d.x <= 0) {
-                    val f = s.sendStop()
-                    TestPingPong1.c.add("PongReceiver")
-                    Thread.sleep(500)
-                    finishAndClose(f)
+                    val end = s.sendStop()
+                    this.finishAndClose(end)
                 } else {
-                    println("\nPING\n")
+                    //println(s"${nameToString()} sending Ping #")
                     d.x = d.x - 1
                     s.sendPingC().suspend(d, pongReceiver3)
                 }
         }
     }
 
-    def pongReceiver3(d: DataB, s: PongReceiver3): Done.type = {
+    def pongReceiver3(d: Data_Receiver, s: PongReceiver3): Done.type = {
         s match {
             case PongPongReceiver(sid, role, s) =>
+                println(s"${nameToString()} received Pong")
                 if (d.x <= 0) {
                     val f = s.sendStop()
-                    TestPingPong1.c.add("PongReceiver")
-                    Thread.sleep(500)
                     finishAndClose(f)
                 } else {
-                    println("\nPING\n")
+                    //println("\nPING\n")
                     d.x = d.x - 1
                     s.sendPingC().suspend(d, pongReceiver3)
                 }
         }
+    }
+
+    override def afterClosed(): Unit = {
+        TestPing.shutdown.add(this.pid)
     }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        //TestPingPong1.c.add("PongReceiver")
-
-        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
-        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: $a $s")
-        cause.printStackTrace()
+        TestPing.handleException(cause, addr, sid)
     }
 }
 
 
 /* ... */
+
+case class Data_Ponger() extends Session.Data
 
 object Ponger extends Actor("MyPonger") with ActorPonger {
 
     def spawn(): Unit = {
-        spawn(9999)
-        registerPonger(9999, "localhost", 8888, DataD(), pongerInit)
+        this.spawn(TestPing.PORT_Ponger)
+        registerPonger(TestPing.PORT_Ponger, "localhost", TestPing.PORT_Proto1, Data_Ponger(), pongerInit)
     }
 
-    def pongerInit(d: DataD, s: Ponger1Suspend): Done.type = {
+    def pongerInit(d: Data_Ponger, s: Ponger1Suspend): Done.type = {
         s.suspend(d, ponger1)
     }
 
-    def ponger1(d: DataD, s: Ponger1): Done.type = {
-
-        println(s"\nPonger 1 ${s}\n")
-
+    def ponger1(d: Data_Ponger, s: Ponger1): Done.type = {
         s match {
             case Ping0Ponger(sid, role, s) =>
                 s.sendPong0().suspend(d, ponger3)
         }
     }
 
-    def ponger3(d: DataD, s: Ponger3): Done.type = {
-
-        println(s"\nPonger 3 ${s}\n")
-
+    def ponger3(d: Data_Ponger, s: Ponger3): Done.type = {
         s match {
             case PingPonger(sid, role, s) =>
+                println(s"${nameToString()} received Ping")
                 s.sendPong().suspend(d, ponger3)
             case StopPonger(sid, role, s) =>
-                TestPingPong1.c.add("Ponger")
-                Thread.sleep(500)
+                println(s"${nameToString()} received Stop")
                 finishAndClose(s)
         }
     }
 
+    override def afterClosed(): Unit = {
+        TestPing.shutdown.add(this.pid)
+    }
+
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        //TestPingPong1.c.add("Ponger")
-
-        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
-        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: $a $s")
-        cause.printStackTrace()
-
-        //enqueueClose()
+        TestPing.handleException(cause, addr, sid)
     }
 }

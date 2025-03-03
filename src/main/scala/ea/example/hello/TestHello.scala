@@ -8,16 +8,16 @@ import java.net.SocketAddress
 
 object TestHello {
 
-    val PORT_hello = 8888
+    val PORT_Proto1 = 8888
     val PORT_A = 7777
     val PORT_B = 6666
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
-        val ap_hello = new Proto1
-        //ap_hello.debug = true
-        ap_hello.spawn(PORT_hello)
+        val ap_Proto1 = new Proto1
+        //ap_Proto1.debug = true
+        ap_Proto1.spawn(PORT_Proto1)
 
         Thread.sleep(500)
 
@@ -28,8 +28,15 @@ object TestHello {
 
         println(s"Closed ${shutdown.take()}.")
         println(s"Closed ${shutdown.take()}.")
-        println(s"Closing ${ap_hello.nameToString()}...")
-        ap_hello.close()
+        println(s"Closing ${ap_Proto1.nameToString()}...")
+        ap_Proto1.close()
+    }
+
+    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
+        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
+        println(s"Channel exception: ${a} ${s}")
+        cause.printStackTrace()
     }
 }
 
@@ -43,7 +50,7 @@ object A extends Actor("MyA") with ActorA {
 
     def spawn(): Unit = {
         this.spawn(TestHello.PORT_A)
-        this.registerA(TestHello.PORT_A, "localhost", TestHello.PORT_hello, DataA(), a1)
+        this.registerA(TestHello.PORT_A, "localhost", TestHello.PORT_Proto1, DataA(), a1)
     }
 
     def a1(d: DataA, s: A1): Done.type = {
@@ -63,10 +70,7 @@ object A extends Actor("MyA") with ActorA {
     }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
-        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: ${a} ${s}")
-        cause.printStackTrace()
+        TestHello.handleException(cause, addr, sid)
     }
 }
 
@@ -79,7 +83,7 @@ object B extends Actor("MyB") with ActorB {
 
     def spawn(): Unit = {
         this.spawn(TestHello.PORT_B)
-        this.registerB(TestHello.PORT_B, "localhost", TestHello.PORT_hello, DataB(), b1Init)
+        this.registerB(TestHello.PORT_B, "localhost", TestHello.PORT_Proto1, DataB(), b1Init)
     }
 
     def b1Init(d: DataB, s: B1Suspend): Done.type = {
@@ -99,9 +103,6 @@ object B extends Actor("MyB") with ActorB {
     }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
-        val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
-        val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: ${a} ${s}")
-        cause.printStackTrace()
+        TestHello.handleException(cause, addr, sid)
     }
 }
