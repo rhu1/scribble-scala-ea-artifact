@@ -1,6 +1,6 @@
 package ea.example.hello
 
-import ea.example.hello.Hello.Proto1.{A1, A2, ActorA, ActorB, B1, B1Suspend, Hello, L1B, L2A}
+import ea.example.hello.Hello.Proto1.{A1, A2, ActorA, ActorB, B1, B1Suspend, Proto1, L1B, L2A}
 import ea.runtime.{Actor, Done, Session}
 
 import java.util.concurrent.LinkedTransferQueue
@@ -15,7 +15,7 @@ object TestHello {
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
-        val ap_hello = new Hello
+        val ap_hello = new Proto1
         //ap_hello.debug = true
         ap_hello.spawn(PORT_hello)
 
