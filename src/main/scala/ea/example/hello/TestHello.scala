@@ -42,7 +42,7 @@ object TestHello {
 
 
 
-/* ... */
+/* A */
 
 case class DataA() extends Session.Data
 
@@ -75,7 +75,7 @@ object A extends Actor("MyA") with ActorA {
 }
 
 
-/* ... */
+/* B */
 
 case class DataB() extends Session.Data
 

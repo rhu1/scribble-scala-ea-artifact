@@ -49,13 +49,9 @@ object TestPing {
 }
 
 
-
-
-/* ... */
-
+/* C */
 
 case class Data_C() extends Session.Data
-
 
 object C extends Actor("MyC") with ActorC {
 
@@ -85,7 +81,7 @@ object C extends Actor("MyC") with ActorC {
 }
 
 
-/* ... */
+/* Pinger */
 
 case class Data_Pinger() extends Session.Data
 
@@ -130,7 +126,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger {
 }
 
 
-/* ... */
+/* PongReceiver */
 
 case class Data_Receiver(var x: Int) extends Session.Data
 
@@ -165,19 +161,19 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
         } else {
             d.x = d.x - 1
             println(s"${nameToString()} sending PingC, remaining ${d.x}")
-            sendPing(d, s)
+            sendPingC(d, s)
         }
     }
 
     def stop[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type = {
-        s match { // No longer exhaustively checked?
+        s match {
             case Pong0PongReceiver(sid, role, s) => this.finishAndClose(s.sendStop())
             case PongPongReceiver(sid, role, s) => this.finishAndClose(s.sendStop())
         }
     }
 
-    def sendPing[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type = {
-        s match { // No longer exhaustively checked?
+    def sendPingC[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type = {
+        s match {
             case Pong0PongReceiver(sid, role, s) => s.sendPingC().suspend(d, pongReceiver1or3)
             case PongPongReceiver(sid, role, s) => s.sendPingC().suspend(d, pongReceiver1or3)
         }
@@ -223,7 +219,7 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
 }
 
 
-/* ... */
+/* Ponger */
 
 case class Data_Ponger() extends Session.Data
 
