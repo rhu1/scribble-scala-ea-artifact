@@ -1,6 +1,6 @@
 package ea.runtime
 
-import java.io.{EOFException, IOException}
+import java.io.IOException
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.ByteBuffer
 import java.nio.channels.*
