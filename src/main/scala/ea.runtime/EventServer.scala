@@ -90,7 +90,11 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         this.sockets += c.getLocalAddress
     }
 
-    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit
+    def afterClosed(): Unit = {}
+
+    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+        cause.printStackTrace()
+    }
 
     // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
@@ -107,6 +111,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                 } finally {
                     this.fSelector = None
                     this.fServerSocket = None
+                    afterClosed()
                 }
             }
         })
@@ -259,7 +264,6 @@ abstract class EventServer(val name: String) extends DebugPrinter {
 
     @throws[IOException]
     private def connect(host: Net.Host, port: Net.Port): SocketChannel = {
-        println(s"${name} connecting... ${port}")
         debugPrintln(s"${name} connecting... ${port}")
         val sSocket = SocketChannel.open(new InetSocketAddress(host, port))
         sSocket.configureBlocking(false)
