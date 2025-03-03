@@ -14,7 +14,7 @@ global protocol Proto1(role C, role Pinger, role Ponger, role PongReceiver) {
 
 aux global protocol Proto1Aux(role C, role Pinger, role Ponger, role PongReceiver) {
     choice at PongReceiver {
-        PingC() from PongReceiver to Pinger;
+        PingC() from PongReceiver to Pinger;  // "internal" message made explicit
         Ping() from Pinger to Ponger;
         Pong() from Ponger to PongReceiver;
         do Proto1Aux(C, Pinger, Ponger, PongReceiver);
