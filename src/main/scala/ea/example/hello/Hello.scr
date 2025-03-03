@@ -1,0 +1,11 @@
+module ea.example.hello.Hello;
+
+data <scala> "String" from "" as String;
+data <scala> "Int" from "" as Int;
+data <scala> "Boolean" from "" as Boolean;
+
+global protocol Proto1(role A, role B)
+{
+	L1() from A to B;
+	L2(Int, String, Boolean) from B to A;
+}

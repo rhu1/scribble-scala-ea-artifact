@@ -1,9 +1,9 @@
 package ea.example.hello
 
+import ea.example.hello.Hello.Proto1.{A1, A2, ActorA, ActorB, B1, B1Suspend, Hello, L1B, L2A}
 import ea.runtime.{Actor, Done, Session}
 
 import java.util.concurrent.LinkedTransferQueue
-
 import java.net.SocketAddress
 
 object TestHello {

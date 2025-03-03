@@ -1,5 +1,6 @@
-package ea.example.hello
+package ea.example.hello.Hello.Proto1
 
+import ea.example.hello.Hello
 import ea.runtime.{AP, Session}
 
 object Hello {
