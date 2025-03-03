@@ -1,0 +1,26 @@
+module ea.example.savina.ping.Ping;
+
+data <scala> "String" from "" as String;
+data <scala> "Int" from "" as Int;
+data <scala> "Boolean" from "" as Boolean;
+
+// `become` not needed -- split Pinger/PongReceiver into two actors (so "self comm" => "explicit comm")
+global protocol Proto1(role C, role Pinger, role Ponger, role PongReceiver) {
+    Start() from C to Pinger;
+    Ping0() from Pinger to Ponger;
+    Pong0() from Ponger to PongReceiver;
+    do Proto1Aux(C, Pinger, Ponger, PongReceiver);
+}
+
+aux global protocol Proto1Aux(role C, role Pinger, role Ponger, role PongReceiver) {
+    choice at PongReceiver {
+        PingC() from PongReceiver to Pinger;
+        Ping() from Pinger to Ponger;
+        Pong() from Ponger to PongReceiver;
+        do Proto1Aux(C, Pinger, Ponger, PongReceiver);
+    } or {
+        Stop() from PongReceiver to Pinger;
+        Stop() from Pinger to Ponger;
+        Stop() from Pinger to C;
+    }
+}
