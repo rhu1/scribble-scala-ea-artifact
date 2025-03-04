@@ -32,6 +32,12 @@ object TestSieve {
         G.main(Array())
         F1.main(Array())
         //F.main(Array())
+
+        /*for i <- 1 to 3 do println(s"Closed ${shutdown.take()}.")  // M, G and F1
+        println(s"Closing ${ap_Proto1.nameToString()}...")
+        ap_Proto1.close()
+        println(s"Closing all Proto2 APs...")
+        Ports.closeAllProto2APs()*/
     }
 
     def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
@@ -63,7 +69,7 @@ object M extends Actor("MyM") with Proto1.ActorM {
                 finishAndClose(s)
         }
 
-    //override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
+    override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestSieve.handleException(cause, addr, sid)
@@ -104,12 +110,12 @@ object G extends Actor("MyG") with Proto1.ActorG {
         s match {
             case Proto1.AckG(sid, role, s) =>
                 val end = s.sendExit()
-                Thread.sleep(500)
+                //Thread.sleep(500)
                 finishAndClose(end)
         }
     }
 
-    //override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
+    override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestSieve.handleException(cause, addr, sid)
@@ -181,14 +187,14 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
         /*val end = s.sendExit2()
         Thread.sleep(500)
         end.finish()*/
-        println(s"F1 waiting for Ack...")
+        println(s"F1 waiting for Ack2...")
         s.sendExit2().suspend(d, f4)
     }
 
     def f4(d: DataC, s: Proto2.F4): Done.type = {
         s match {
             case Proto2.Ack2F(sid, role, s) =>
-                println("F1 got Ack, closing")
+                println("F1 got Ack2, closing")  // !!! don't send Proto1.Ack until here
                 Thread.sleep(500)
                 finishAndClose(s)
         }
@@ -332,7 +338,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
         }
     }
 
-    //override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
+    override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestSieve.handleException(cause, addr, sid)
@@ -439,7 +445,7 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                     this.pendingExit = true
                 }
 
-                val done = s.sendAck2().finish() // !!! `exit` is doing close... (waits for Ack2 from Fnext)
+                val done = s.sendAck2().finish() // !!! `exit` is doing close... (waits for Ack2 from Fnext)  // XXX don't send our Ack2 until got an Ack2 from neighbor if any
                 Thread.sleep(500)
                 done
 
@@ -546,7 +552,7 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
         }
     }
 
-    //override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
+    //override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestSieve.handleException(cause, addr, sid)
