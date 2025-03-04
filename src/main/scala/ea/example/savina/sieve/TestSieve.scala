@@ -49,20 +49,20 @@ object TestSieve {
 }
 
 
-/* ... */
+/* M */
 
-case class DataA() extends Session.Data
+case class Data_M() extends Session.Data
 
 object M extends Actor("MyM") with Proto1.ActorM {
 
     def main(args: Array[String]): Unit = {
         this.spawn(TestSieve.PORT_M)
-        this.registerM(TestSieve.PORT_M, "localhost", TestSieve.PORT_Proto1, DataA(), m1)
+        this.registerM(TestSieve.PORT_M, "localhost", TestSieve.PORT_Proto1, Data_M(), m1)
     }
 
-    def m1(d: DataA, s: Proto1.M1): Done.type = s.sendStart().suspend(d, m2)
+    def m1(d: Data_M, s: Proto1.M1): Done.type = s.sendStart().suspend(d, m2)
 
-    def m2(d: DataA, s: Proto1.M2): Done.type =
+    def m2(d: Data_M, s: Proto1.M2): Done.type =
         s match {
             case Proto1.ExitM(sid, role, s) =>
                 //Thread.sleep(1000)
@@ -76,23 +76,20 @@ object M extends Actor("MyM") with Proto1.ActorM {
 }
 
 
-/* ... */
+/* G */
 
-case class DataB() extends Session.Data
+case class Data_G() extends Session.Data
 
 object G extends Actor("MyG") with Proto1.ActorG {
 
     def main(args: Array[String]): Unit = {
-        spawn(TestSieve.PORT_G)
-        registerG(TestSieve.PORT_G, "localhost", TestSieve.PORT_Proto1, DataB(), g1Suspend)
+        this.spawn(TestSieve.PORT_G)
+        this.registerG(TestSieve.PORT_G, "localhost", TestSieve.PORT_Proto1, Data_G(), g1Suspend)
     }
 
-    def g1Suspend(d: DataB, s: Proto1.G1Suspend): Done.type = {
-       s.suspend(d, g1)
-    }
+    def g1Suspend(d: Data_G, s: Proto1.G1Suspend): Done.type = s.suspend(d, g1)
 
-    def g1(d: DataB, s: Proto1.G1): Done.type = {
-            //println(s"(${s.sid}) A sending L1...")
+    def g1(d: Data_G, s: Proto1.G1): Done.type =
         s match {
             case Proto1.StartG(sid, role, s) =>
                 var s2 = s.sendNewPrime(2)
@@ -103,17 +100,14 @@ object G extends Actor("MyG") with Proto1.ActorG {
                 }
                 s2.sendExit().suspend(d, g4)
         }
-    }
 
-    def g4(d: DataB, s: Proto1.G4): Done.type = {
-        //println(s"(${s.sid}) A sending L1...")
+    def g4(d: Data_G, s: Proto1.G4): Done.type =
         s match {
             case Proto1.AckG(sid, role, s) =>
                 val end = s.sendExit()
                 //Thread.sleep(500)
                 finishAndClose(end)
         }
-    }
 
     override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
 
@@ -122,9 +116,9 @@ object G extends Actor("MyG") with Proto1.ActorG {
 }
 
 
-/* ... */
+/* F1 */
 
-case class DataC() extends Session.Data {
+case class Data_F1() extends Session.Data {
     //var c22: LinOption[Fib2.C22] = LinNone()
     var f3: LinOption[Proto2.F3] = LinNone()
     var x: Int = -1
@@ -134,134 +128,63 @@ case class DataC() extends Session.Data {
 
 object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
 
-    val numMaxLocalPrimes = 3
-    //var nextFilterActor: ActorRef = null
-    var hasNext: Boolean = false
-
     // TODO Data -- also factor out with F
-    val buff: collection.mutable.ListBuffer[Int] = collection.mutable.ListBuffer()
-    var readyNext: Boolean = false
-    var pendingExit: Boolean = false
+    val numMaxLocalPrimes = 3
 
-    // TODO Data
-    val localPrimes = new Array[Long](numMaxLocalPrimes)
-    var availableLocalPrimes = 0
+    private val buff: collection.mutable.ListBuffer[Int] = collection.mutable.ListBuffer()
+    private val localPrimes = new Array[Long](numMaxLocalPrimes)
+    private var availableLocalPrimes = 0
+
+    private var hasNext: Boolean = false
+    private var readyNext: Boolean = false
+    private var pendingExit: Boolean = false
 
     def main(args: Array[String]): Unit = {
-        this.spawn(5555)
-        this.registerF1(5555, "localhost", 8888, DataC(), f11Init)
+        this.spawn(TestSieve.PORT_F1)
+        this.registerF1(TestSieve.PORT_F1, "localhost", TestSieve.PORT_Proto1, Data_F1(), f11Init)
     }
 
-    def f11Init(d: DataC, s: Proto1.F11Suspend): Done.type = {
-        s.suspend(d, f11)
-    }
+    def f11Init(d: Data_F1, s: Proto1.F11Suspend): Done.type = s.suspend(d, f11)
 
-    //def locallyPrime(x: Int): Boolean = true
-    def isLocallyPrime(candidate: Long, localPrimes: Array[Long], startInc: Int, endExc: Int): Boolean = {
-        for (i <- startInc until endExc) {
-            val remainder = candidate % localPrimes(i)
-            if (remainder == 0) return false
-        }
-        true
-    }
-
-    def f3LongBox(d: DataC, s: Proto2.F3): Done.type = {
-        val s1 = s.sendLongBox2(d.x)
-        val (a, done) = freeze(s1, (sid, r, a) => Proto2.F3(sid, r, a))
-        d.f3 = a
-        done
-    }
-
-    def storeLocally(): Boolean = availableLocalPrimes < numMaxLocalPrimes
-
-    def f11(d: DataC, s: Proto1.F11): Done.type = {
+    def f11(d: Data_F1, s: Proto1.F11): Done.type =
         s match {
             case Proto1.NewPrimeF1(sid, role, x, s) =>
                 // save x in local primes
-                localPrimes(availableLocalPrimes) = x  // i = 0
-                availableLocalPrimes = availableLocalPrimes + 1
+                this.localPrimes(availableLocalPrimes) = x  // i = 0
+                this.availableLocalPrimes += 1
                 s.suspend(d, f12)
         }
-    }
 
-    def exitF13(d: DataC, s: Proto1.F13): Done.type = {
-        val end = s.sendAck();
-        ccc += 1
-        if (ccc == 2) {
-            finishAndClose(end)
-        } else {
-            end.finish()
-        }
-    }
-
-    def exit(d: DataC, s: Proto2.F3): Done.type = {
-        /*val end = s.sendExit2()
-        Thread.sleep(500)
-        end.finish()*/
-        println(s"F1 waiting for Ack2...")
-        s.sendExit2().suspend(d, f4)
-    }
-
-    private var ccc = 0
-
-    def f4(d: DataC, s: Proto2.F4): Done.type = {
-        s match {
-            case Proto2.Ack2F(sid, role, s) =>
-                println("F1 got Ack2, closing")  // !!! don't send Proto1.Ack until here
-                Thread.sleep(500)
-                ccc += 1
-                if (ccc == 2) {
-                    finishAndClose(s)
-                } else {
-                    s.finish()
-                }
-        }
-    }
-
-    def exitMatch(d: DataC): Done.type = {
-        d.f3 match {
-            case _: Session.LinNone =>
-                println(s"aaaaaaaa: $hasNext $readyNext")
-                throw new RuntimeException("missing frozen")
-            case y: Session.LinSome[Proto2.F3] =>
-                become(d, y, exit)
-        }
-    }
-
-    def f12(d: DataC, s: Proto1.F12): Done.type = {
-
-        println(s"F1 received ${s}")
-
+    def f12(d: Data_F1, s: Proto1.F12): Done.type = {
         s match {
             case Proto1.ExitF1(sid, role, s) =>
-                // become Sieve2.F and send Exit
                 //localPrimes.foreach(x => print(s"${x} "))
-                (0 until availableLocalPrimes).foreach(x => print(s"${localPrimes(x)} "))
-                println()
+                println(s"${nameToString()} received Exit: ${(0 until availableLocalPrimes).foldLeft("")((x, y) => x + localPrimes(y).toString)}")
 
-                if (!hasNext) {
-                    // TODO freeze for pendingExit?
-                    // !!! XXX cannot close until Fnext done... -- in generally need close permission ack msg
-                    //finishAndClose(s)
-                    /*val done = s.sendAck().finish() // !!! `exit` is doing close... (waits for Ack2 from Fnext)
-                    Thread.sleep(500)
-                    done*/
-                    finishAndClose(s.sendAck())
+                ccc += 1
+                val end = s.sendAck()
+                if (!this.hasNext) {
+                    finishAndClose(end)
                 } else {
-
                     // !!! Actor(MyF1) Read from /127.0.0.1: 50834: SEND_Sieve1_1_G_F1_LongBox_3.SEND_Sieve1_1_G_F1_LongBox_5.SEND_Sieve1_1_G_F1_LongBox_7.SEND_Sieve1_1_G_F1_LongBox_9.SEND_Sieve1_1_G_F1_LongBox_11.SEND_Sieve1_1_G_F1_LongBox_13.SEND_Sieve1_1_G_F1_LongBox_15.SEND_Sieve1_1_G_F1_LongBox_17.SEND_Sieve1_1_G_F1_LongBox_19.SEND_Sieve1_1_G_F1_Exit_.
-                    if (readyNext) {
-                        exitMatch(d)
-                        //finishAndClose(s.sendAck())
+                    if (this.readyNext) {
+                        // become Sieve2.F and send Exit
+                        //exitMatch(d)
 
+                        end.finish()
+                        d.f3 match {
+                            case _: Session.LinNone => throw new RuntimeException("missing frozen")
+                            case y: Session.LinSome[_] => become(d, y, sendExit2)
+                        }
+                        //finishAndClose(s.sendAck())
                         //Thread.sleep(500)
                     } else {
                         this.pendingExit = true // CHECKME cf. theory?  concurrency between (async) register and become (of expected frozen)
+                        /*val (a, done) = freeze(s, (sid, r, a) => Proto1.F13(sid, r, a))
+                        d.f13 = a
+                        done*/
+                        end.finish()
                     }
-
-                    val (a, done) = freeze(s, (sid, r, a) => Proto1.F13(sid, r, a))
-                    d.f13 = a
-                    done
                 }
 
             case Proto1.LongBoxF1(sid, role, x, s) => {
@@ -277,7 +200,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                 if (isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)) {
                     //if (hasNext) {  // HERE should be "next ready"
                     if (readyNext) { // HERE should be "next ready"
-                            println(s"F1 should pass ${x}...")
+                        println(s"F1 should pass ${x}...")
                         // become
                         d.f3 match {
                             case _: Session.LinNone =>
@@ -337,12 +260,65 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
         }
     }
 
-    def f1Init(d: DataC, s: Proto2.F1Suspend): Done.type = {
+    // Send Ack to G
+    def exitF13(d: Data_F1, s: Proto1.F13): Done.type = {
+        val end = s.sendAck();
+        ccc += 1
+        if (!hasNext || ccc == 2) {
+            finishAndClose(end)
+        } else {
+            end.finish()
+        }
+    }
+
+    def isLocallyPrime(candidate: Long, localPrimes: Array[Long], startInc: Int, endExc: Int): Boolean = {
+        for (i <- startInc until endExc) {
+            val remainder = candidate % localPrimes(i)
+            if (remainder == 0) return false
+        }
+        true
+    }
+
+    def storeLocally(): Boolean = this.availableLocalPrimes < this.numMaxLocalPrimes
+
+    def f3LongBox(d: Data_F1, s: Proto2.F3): Done.type =
+        val s1 = s.sendLongBox2(d.x)
+        val (a, done) = freeze(s1, (sid, r, a) => Proto2.F3(sid, r, a))
+        d.f3 = a
+        done
+
+    // Pre: hasNext
+    def sendExit2(d: Data_F1, s: Proto2.F3): Done.type = {
+        /*val end = s.sendExit2()
+        Thread.sleep(500)
+        end.finish()*/
+        println(s"F1 waiting for Ack2...")
+        s.sendExit2().suspend(d, f4)
+    }
+
+    private var ccc = 0  // Sent Ack to G and if hasNext then received Ack2 from Fnext
+
+    // Pre: hasNext => receive Ack2 from Fnext
+    def f4(d: Data_F1, s: Proto2.F4): Done.type = {
+        s match {
+            case Proto2.Ack2F(sid, role, s) =>
+                println("F1 got Ack2, closing")  // !!! don't send Proto1.Ack until here
+                Thread.sleep(500)
+                ccc += 1
+                if (ccc == 2) {
+                    finishAndClose(s)
+                } else {
+                    s.finish()
+                }
+        }
+    }
+
+    def f1Init(d: Data_F1, s: Proto2.F1Suspend): Done.type = {
         s.suspend(d, f1)
     }
 
     // !!! register is event-driven, so this cannot be done inline with F spawning
-    def f1(d: DataC, s: Proto2.F1): Done.type = {
+    def f1(d: Data_F1, s: Proto2.F1): Done.type = {
         s match {
             case Proto2.ReadyF(sid, role, s) =>
                 this.readyNext = true
@@ -358,12 +334,13 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
 
                 //val done =
                 if (this.pendingExit) {
-                    val done = exit(d, s3)
+                    val done = sendExit2(d, s3)
 
-                    d.f13 match {
+                    /*d.f13 match {
                         case _: Session.LinNone => done // skip
                         case y: Session.LinSome[_] => become(d, y, exitF13)
-                    }
+                    }*/
+                    done
                 } else {
                     val (a, done) = freeze(s3, (sid, r, a) => Proto2.F3(sid, r, a))
                     d.f3 = a
