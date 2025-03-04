@@ -251,18 +251,17 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
 
                     // !!! Actor(MyF1) Read from /127.0.0.1: 50834: SEND_Sieve1_1_G_F1_LongBox_3.SEND_Sieve1_1_G_F1_LongBox_5.SEND_Sieve1_1_G_F1_LongBox_7.SEND_Sieve1_1_G_F1_LongBox_9.SEND_Sieve1_1_G_F1_LongBox_11.SEND_Sieve1_1_G_F1_LongBox_13.SEND_Sieve1_1_G_F1_LongBox_15.SEND_Sieve1_1_G_F1_LongBox_17.SEND_Sieve1_1_G_F1_LongBox_19.SEND_Sieve1_1_G_F1_Exit_.
                     if (readyNext) {
-                        ccc += 1
-                        s.sendAck().finish()
                         exitMatch(d)
                         //finishAndClose(s.sendAck())
 
                         //Thread.sleep(500)
                     } else {
                         this.pendingExit = true // CHECKME cf. theory?  concurrency between (async) register and become (of expected frozen)
-                        val (a, done) = freeze(s, (sid, r, a) => Proto1.F13(sid, r, a))
-                        d.f13 = a
-                        done
                     }
+
+                    val (a, done) = freeze(s, (sid, r, a) => Proto1.F13(sid, r, a))
+                    d.f13 = a
+                    done
                 }
 
             case Proto1.LongBoxF1(sid, role, x, s) => {
@@ -359,8 +358,6 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
 
                 //val done =
                 if (this.pendingExit) {
-                    println("\nAAAAAAAAAAAAAAAAAA\n")
-
                     val done = exit(d, s3)
 
                     d.f13 match {
@@ -497,10 +494,10 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                         }
                     } else {
                         this.pendingExit = true
-                        val (a, done) = freeze(s, (sid, r, a) => Proto2.Fnext4(sid, r, a))
-                        d.fn4 = a
-                        done
                     }
+                    val (a, done) = freeze(s, (sid, r, a) => Proto2.Fnext4(sid, r, a))
+                    d.fn4 = a
+                    done
                 }
 
             case Proto2.LongBox2Fnext(sid, role, x, s) => {
