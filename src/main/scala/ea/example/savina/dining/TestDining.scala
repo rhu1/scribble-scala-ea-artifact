@@ -71,7 +71,6 @@ class M(val N: Int) extends Actor("MyM") with Proto1.ActorM {
         // ...register and run for each P
         for (i <- Range.inclusive(1, N)) {
             this.registerM(TestDining.PORT_M, "localhost", TestDining.PORT_Proto1, Data_M(), m1)
-            //Thread.sleep(200)
         }
     }
 
@@ -79,7 +78,6 @@ class M(val N: Int) extends Actor("MyM") with Proto1.ActorM {
         val s2 = s.sendStart()
         this.count = this.count + 1
         if (this.count == this.N) {
-            //Thread.sleep(500)
             finishAndClose(s2)
         } else {
             s2.finish()
@@ -184,7 +182,7 @@ class A(val numForks: Int) extends Actor("MyA") with Proto2.ActorA {
                 }
             case Proto2.ExitA(sid, role, s) =>
                 numExitedPhilosophers = numExitedPhilosophers + 1
-                Thread.sleep(500)
+                //Thread.sleep(500)
                 if (numForks == numExitedPhilosophers) {
                     finishAndClose(s)
                 } else {
@@ -240,7 +238,7 @@ class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends 
                 println(s"Phil ${id} done eating -- remaining ${rem}.")
                 if (rem <= 0) {
                     val end = s5.sendExit()
-                    Thread.sleep(500)
+                    //Thread.sleep(500)
                     finishAndClose(end)
                 } else {
                     println(s"Phil ${id} hungryE")

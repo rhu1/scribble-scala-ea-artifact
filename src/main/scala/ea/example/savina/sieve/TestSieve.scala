@@ -105,7 +105,6 @@ object G extends Actor("MyG") with Proto1.ActorG {
         s match {
             case Proto1.AckG(sid, role, s) =>
                 val end = s.sendExit()
-                //Thread.sleep(500)
                 finishAndClose(end)
         }
 
@@ -119,10 +118,9 @@ object G extends Actor("MyG") with Proto1.ActorG {
 /* F1 */
 
 case class Data_F1() extends Session.Data {
-    //var c22: LinOption[Fib2.C22] = LinNone()
-    var f3: LinOption[Proto2.F3] = LinNone()
     var x: Int = -1
-    var newPrime: Int = -1
+    //var newPrime: Int = -1
+    var f3: LinOption[Proto2.F3] = LinNone()
     var f13: LinOption[Proto1.F13] = LinNone()
 }
 
@@ -182,7 +180,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                     end.finish()
                 }
 
-            case Proto1.LongBoxF1(sid, role, x, s) => {
+            case Proto1.LongBoxF1(sid, role, x, s) =>
                 if (isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)) {
                     if (this.readyNext) {  // i.e., local already full
                         // become
@@ -210,7 +208,6 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                     }
                 }
                 s.suspend(d, f12)
-            }
         }
     }
 
@@ -305,9 +302,9 @@ object Ports {
 /* F */
 
 case class DataD() extends Session.Data {
-    var f3: LinOption[Proto2.F3] = LinNone()
     var x: Int = -1
-    var newPrime: Int = -1
+    //var newPrime: Int = -1
+    var f3: LinOption[Proto2.F3] = LinNone()
     var fn4: LinOption[Proto2.Fnext4] = LinNone()
 }
 
@@ -356,7 +353,7 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                     if (this.readyNext) {
                         d.f3 match {
                             case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
-                            case y: Session.LinSome[Proto2.F3] => become(d, y, sendExit2ToNext)
+                            case y: Session.LinSome[_] => become(d, y, sendExit2ToNext)
                         }
                     } else {
                         this.pendingExit = true  // Do sendExit2ToNext later
@@ -364,13 +361,13 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                     done
                 }
 
-            case Proto2.LongBox2Fnext(sid, role, x, s) => {
+            case Proto2.LongBox2Fnext(sid, role, x, s) =>
                 if (isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)) {
                     if (readyNext) {
                         // become
                         d.f3 match {
                             case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
-                            case y: Session.LinSome[Proto2.F3] =>
+                            case y: Session.LinSome[_] =>
                                 d.x = x
                                 become(d, y, f3LongBox)
                         }
@@ -393,7 +390,6 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                     }
                 }
                 s.suspend(d, n3)
-            }
         }
     }
 
