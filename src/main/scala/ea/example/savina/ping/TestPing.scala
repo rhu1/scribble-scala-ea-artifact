@@ -27,15 +27,12 @@ object TestPing {
         //Pinger.debug = true
         //PongReceiver.debug = true
         //Ponger.debug = true
-        PongReceiver.spawn()
         Ponger.spawn()
+        PongReceiver.spawn()
         Pinger.spawn()
         C.spawn()
 
-        println(s"Closed ${shutdown.take()}")
-        println(s"Closed ${shutdown.take()}")
-        println(s"Closed ${shutdown.take()}")
-        println(s"Closed ${shutdown.take()}")
+        for i <- 1 to 4 do println(s"Closed ${shutdown.take()}.")
         println(s"Closing ${ap_Proto1.nameToString()}...")
         ap_Proto1.close()
     }
@@ -60,24 +57,17 @@ object C extends Actor("MyC") with ActorC {
         this.registerC(TestPing.PORT_C, "localhost", TestPing.PORT_Proto1, Data_C(), c1)
     }
 
-    def c1(d: Data_C, s: C1): Done.type = {
-        s.sendStart().suspend(d, c2)
-    }
+    def c1(d: Data_C, s: C1): Done.type = s.sendStart().suspend(d, c2)
 
-    def c2(d: Data_C, s: C2): Done.type = {
+    def c2(d: Data_C, s: C2): Done.type =
         s match {
-            case StopC(sid, role, s) =>
-                this.finishAndClose(s)
+            case StopC(sid, role, s) => this.finishAndClose(s)
         }
-    }
 
-    override def afterClosed(): Unit = {
-        TestPing.shutdown.add(this.pid)
-    }
+    override def afterClosed(): Unit = TestPing.shutdown.add(this.pid)
 
-    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestPing.handleException(cause, addr, sid)
-    }
 }
 
 
@@ -92,19 +82,16 @@ object Pinger extends Actor("MyPinger") with ActorPinger {
         this.registerPinger(TestPing.PORT_Pinger, "localhost", TestPing.PORT_Proto1, Data_Pinger(), pingerInit)
     }
 
-    def pingerInit(d: Data_Pinger, s: Pinger1Suspend): Done.type = {
-        s.suspend(d, pinger1)
-    }
+    def pingerInit(d: Data_Pinger, s: Pinger1Suspend): Done.type = s.suspend(d, pinger1)
 
-    def pinger1(d: Data_Pinger, s: Pinger1): Done.type = {
+    def pinger1(d: Data_Pinger, s: Pinger1): Done.type =
         s match {
             case StartPinger(sid, role, s) =>
                 println(s"${nameToString()} received Start")
                 s.sendPing0().suspend(d, pinger3)
         }
-    }
 
-    def pinger3(d: Data_Pinger, s: Pinger3): Done.type = {
+    def pinger3(d: Data_Pinger, s: Pinger3): Done.type =
         s match {
             case PingCPinger(sid, role, s) =>
                 println(s"${nameToString()} received PingC")
@@ -114,35 +101,30 @@ object Pinger extends Actor("MyPinger") with ActorPinger {
                 //println("\nSTOP\n")
                 this.finishAndClose(end)
         }
-    }
 
-    override def afterClosed(): Unit = {
-        TestPing.shutdown.add(this.pid)
-    }
+    override def afterClosed(): Unit = TestPing.shutdown.add(this.pid)
 
-    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestPing.handleException(cause, addr, sid)
-    }
 }
 
 
 /* PongReceiver */
 
-case class Data_Receiver(var x: Int) extends Session.Data
+case class Data_Receiver(var rem: Int) extends Session.Data
 
 object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
 
-    val repeats = 2
+    val REPEATS = 2
 
     def spawn(): Unit = {
         this.spawn(TestPing.PORT_PongReceiver)
         this.registerPongReceiver(TestPing.PORT_PongReceiver, "localhost",
-            TestPing.PORT_Proto1, Data_Receiver(repeats), pongReceiverInit)
+            TestPing.PORT_Proto1, Data_Receiver(REPEATS), pongReceiverInit)
     }
 
-    def pongReceiverInit(d: Data_Receiver, s: PongReceiver1Suspend): Done.type = {
+    def pongReceiverInit(d: Data_Receiver, s: PongReceiver1Suspend): Done.type =
         s.suspend(d, pongReceiver1or3)
-    }
 
     sealed trait PongReceiver1or3[T]
     object PongReceiver1or3 {
@@ -156,30 +138,28 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
             case Pong0PongReceiver(sid, role, s) => println(s"${nameToString()} received Pong0")
             case PongPongReceiver(sid, role, s) => println(s"${nameToString()} received Pong")
         }
-        if (d.x <= 0) {
+        if (d.rem <= 0) {
             stop(d, s)
         } else {
-            d.x = d.x - 1
-            println(s"${nameToString()} sending PingC, remaining ${d.x}")
+            d.rem = d.rem - 1
+            println(s"${nameToString()} sending PingC, remaining ${d.rem}...")
             sendPingC(d, s)
         }
     }
 
-    def stop[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type = {
+    def stop[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type =
         s match {
             case Pong0PongReceiver(sid, role, s) => this.finishAndClose(s.sendStop())
             case PongPongReceiver(sid, role, s) => this.finishAndClose(s.sendStop())
         }
-    }
 
-    def sendPingC[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type = {
+    def sendPingC[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type =
         s match {
             case Pong0PongReceiver(sid, role, s) => s.sendPingC().suspend(d, pongReceiver1or3)
             case PongPongReceiver(sid, role, s) => s.sendPingC().suspend(d, pongReceiver1or3)
         }
-    }
 
-    /*def pongReceiver1(d: Data_Receiver, s: PongReceiver1): Done.type = {
+    /*def pongReceiver1(d: Data_Receiver, s: PongReceiver1): Done.type =
         s match {
             case Pong0PongReceiver(sid, role, s) =>
                 println(s"${nameToString()} received Pong0")
@@ -187,14 +167,13 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
                     val end = s.sendStop()
                     this.finishAndClose(end)
                 } else {
-                    //println(s"${nameToString()} sending Ping #")
+                    //println(s"${nameToString()} sending Ping #...")
                     d.x = d.x - 1
                     s.sendPingC().suspend(d, pongReceiver3)
                 }
         }
-    }
 
-    def pongReceiver3(d: Data_Receiver, s: PongReceiver3): Done.type = {
+    def pongReceiver3(d: Data_Receiver, s: PongReceiver3): Done.type =
         s match {
             case PongPongReceiver(sid, role, s) =>
                 println(s"${nameToString()} received Pong")
@@ -206,16 +185,12 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
                     d.x = d.x - 1
                     s.sendPingC().suspend(d, pongReceiver3)
                 }
-        }
-    }*/
+        }*/
 
-    override def afterClosed(): Unit = {
-        TestPing.shutdown.add(this.pid)
-    }
+    override def afterClosed(): Unit = TestPing.shutdown.add(this.pid)
 
-    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestPing.handleException(cause, addr, sid)
-    }
 }
 
 
@@ -230,18 +205,15 @@ object Ponger extends Actor("MyPonger") with ActorPonger {
         registerPonger(TestPing.PORT_Ponger, "localhost", TestPing.PORT_Proto1, Data_Ponger(), pongerInit)
     }
 
-    def pongerInit(d: Data_Ponger, s: Ponger1Suspend): Done.type = {
-        s.suspend(d, ponger1)
-    }
+    def pongerInit(d: Data_Ponger, s: Ponger1Suspend): Done.type = s.suspend(d, ponger1)
 
-    def ponger1(d: Data_Ponger, s: Ponger1): Done.type = {
+    def ponger1(d: Data_Ponger, s: Ponger1): Done.type =
         s match {
             case Ping0Ponger(sid, role, s) =>
                 s.sendPong0().suspend(d, ponger3)
         }
-    }
 
-    def ponger3(d: Data_Ponger, s: Ponger3): Done.type = {
+    def ponger3(d: Data_Ponger, s: Ponger3): Done.type =
         s match {
             case PingPonger(sid, role, s) =>
                 println(s"${nameToString()} received Ping")
@@ -250,13 +222,9 @@ object Ponger extends Actor("MyPonger") with ActorPonger {
                 println(s"${nameToString()} received Stop")
                 finishAndClose(s)
         }
-    }
 
-    override def afterClosed(): Unit = {
-        TestPing.shutdown.add(this.pid)
-    }
+    override def afterClosed(): Unit = TestPing.shutdown.add(this.pid)
 
-    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+    override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestPing.handleException(cause, addr, sid)
-    }
 }
