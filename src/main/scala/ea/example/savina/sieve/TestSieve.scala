@@ -372,6 +372,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
         }
     }
 
+    // Sent Ack to G and if hasNext then received Ack2 from Fnext
     override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
@@ -603,6 +604,7 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
         }
     }
 
+    // Sent Ack2 to F and if hasNext then received Ack2 from Fnext
     override def afterClosed(): Unit = //TestSieve.shutdown.add(this.pid)
         println(s"Closed ${this.pid}")
 
