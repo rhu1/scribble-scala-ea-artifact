@@ -1,5 +1,8 @@
 package ea.example.savina.fib
 
+import ea.example.savina.fib.Fib.Proto1.{ActorC, ActorP, C1, C1Suspend, C2, P1, P2, Proto1, RequestC, ResponseP}
+import ea.example.savina.fib.Fib.Proto2
+import ea.example.savina.fib.Fib.Proto2.{ActorC1, C11, C11Suspend, C12, Request1C1}
 import ea.runtime.Session.*
 import ea.runtime.{Actor, Done, Net, Session}
 
@@ -17,7 +20,7 @@ object TestFib {
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
-        val ap_Proto1 = new Proto1.Proto1
+        val ap_Proto1 = new Proto1
         ap_Proto1.spawn(PORT_Proto1)
 
         Thread.sleep(500)
@@ -70,14 +73,14 @@ object Ports {
 
 case class Data_Main() extends Session.Data
 
-object M extends Actor("MyM") with Proto1.ActorP {
+object M extends Actor("MyM") with ActorP {
 
     def main(args: Array[String]): Unit = {
         this.spawn(TestFib.PORT_M)
         this.registerP(TestFib.PORT_M, "localhost", TestFib.PORT_Proto1, Data_Main(), m1)
     }
 
-    def m1(d: Data_Main, s: Proto1.P1): Done.type = {
+    def m1(d: Data_Main, s: P1): Done.type = {
         // 1 1 2 3 5 8 13 21 34 55
         //s.sendRequest(2).suspend(d, m2)
         //s.sendRequest(3).suspend(d, m2)
@@ -86,9 +89,9 @@ object M extends Actor("MyM") with Proto1.ActorP {
         //s.sendRequest(15).suspend(d, m2)  // XXX uses a lot of ports, port spam problem? or simply port in use?
     }
     
-    def m2(d: Data_Main, s: Proto1.P2): Done.type =
+    def m2(d: Data_Main, s: P2): Done.type =
         s match {
-            case Proto1.ResponseP(sid, role, x, s) =>
+            case ResponseP(sid, role, x, s) =>
                 //println(s"(${sid}) A received L2.")
                 //Thread.sleep(1000)
                 //println(s"(${sid}) A sending L1...")
@@ -108,23 +111,23 @@ object M extends Actor("MyM") with Proto1.ActorP {
 case class Data_F() extends Session.Data {
     var n_req: Int = 0
     var x_resp: Int = 0
-    var c2: LinOption[Proto1.C2] = LinNone()
+    var c2: LinOption[C2] = LinNone()
 }
 
-object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
+object F extends Actor("MyF") with ActorC with Proto2.ActorP {
 
     def main(args: Array[String]): Unit = {
         this.spawn(TestFib.PORT_F)
         this.registerC(TestFib.PORT_F, "localhost", TestFib.PORT_Proto1, Data_F(), c1Init)
     }
 
-    def c1Init(d: Data_F, s: Proto1.C1Suspend): Done.type = {
+    def c1Init(d: Data_F, s: C1Suspend): Done.type = {
         s.suspend(d, c1)
     }
 
-    def c1(d: Data_F, s: Proto1.C1): Done.type =
+    def c1(d: Data_F, s: C1): Done.type =
         s match {
-            case Proto1.RequestC(sid, role, x, s) =>
+            case RequestC(sid, role, x, s) =>
                 d.n_req = x
                 if (d.n_req <= 2) {  // Asking for 1st or 2nd Fib number
                     finishAndClose(s.sendResponse(1))  // Close here or...*
@@ -132,7 +135,7 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
 
                     // freeze s -- !!! cf. just do inline input? (i.e., Fib2 Response) -- same guarantees as freeze/become? -- XXX would need to spawn parallel actor (as this event loop would be blocked) and do out-of-band input, e.g., local chan
                     // !!! revisit "callback stack" idea ?
-                    val (f, done) = freeze(s, (sid, r, a) => Proto1.C2(sid, r, a))
+                    val (f, done) = freeze(s, (sid, r, a) => Fib.Proto1.C2(sid, r, a))
                     d.c2 = f
 
                     val port_Proto2 = Ports.spawnFreshProto2AP()
@@ -169,7 +172,7 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
                 s.finish()
         }
 
-    def cb(d: Data_F, s: Proto1.C2): Done.type = {
+    def cb(d: Data_F, s: C2): Done.type = {
         println(s"${nameToString()} sending F(${d.n_req}): ${d.x_resp}")
         finishAndClose(s.sendResponse(d.x_resp))
     }  // *...or close here
@@ -186,23 +189,23 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
 case class Data_F1() extends Session.Data {
     var n_req: Int = 0
     var x_resp: Int = 0
-    var c12: LinOption[Proto2.C12] = LinNone()
+    var c12: LinOption[C12] = LinNone()
 }
 
-class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with Proto2.ActorC1 with Proto2.ActorP {
+class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with ActorC1 with Proto2.ActorP {
 
     def main(args: Array[String]): Unit = {
         this.spawn(port)
         this.registerC1(port, "localhost", aport, Data_F1(), c1Init)
     }
 
-    def c1Init(d: Data_F1, s: Proto2.C11Suspend): Done.type = {
+    def c1Init(d: Data_F1, s: C11Suspend): Done.type = {
         s.suspend(d, c1)
     }
 
-    def c1(d: Data_F1, s: Proto2.C11): Done.type = {
+    def c1(d: Data_F1, s: C11): Done.type = {
         s match {
-            case Proto2.Request1C1(sid, role, x, s) =>
+            case Request1C1(sid, role, x, s) =>
                 d.n_req = x
                 if (d.n_req <= 2) {  // Asking for 1st or 2nd Fib number
                     finishAndClose(s.sendResponse1(1))
