@@ -18,8 +18,8 @@ object TestFib {
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
-        val p1 = new Proto1.Proto1
-        p1.spawn(PORT_Proto1)
+        val ap_Proto1 = new Proto1.Proto1
+        ap_Proto1.spawn(PORT_Proto1)
 
         Thread.sleep(500)
 
@@ -27,8 +27,11 @@ object TestFib {
         //F.debug = true
         M.main(Array());
         F.main(Array())
-        
+
         //HERE HERE close
+        for i <- 1 to 2 do println(s"Closed ${shutdown.take()}.")
+        println(s"Closing ${ap_Proto1.nameToString()}...")
+        ap_Proto1.close()
     }
 
     def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
@@ -68,7 +71,7 @@ object M extends Actor("MyM") with Proto1.ActorP {
         //s.sendRequest(3).suspend(d, m2)
         //s.sendRequest(7).suspend(d, m2)
         s.sendRequest(10).suspend(d, m2)  // 55
-        s.sendRequest(15).suspend(d, m2)  // XXXX uses a lot of ports, port spam problem? or simply port in use?
+        //s.sendRequest(15).suspend(d, m2)  // XXXX uses a lot of ports, port spam problem? or simply port in use?
     }
     
     def m2(d: Data_Main, s: Proto1.P2): Done.type =
@@ -127,8 +130,8 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
         s match {
             case Proto1.RequestC(sid, role, x, s) =>
                 d.reqx = x
-                val done = if (d.reqx <= 2) {  // Asking for 1st or 2nd Fib number
-                    s.sendResponse(1).finish()
+                if (d.reqx <= 2) {  // Asking for 1st or 2nd Fib number
+                    finishAndClose(s.sendResponse(1))  // Close here or...*
                 } else {
 
                     // freeze s -- !!! cf. just do inline input? (i.e., Fib2 Response) -- same guarantees as freeze/become? -- XXX would need to spawn parallel actor (as this event loop would be blocked) and do out-of-band input, e.g., local chan
@@ -149,7 +152,6 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
 
                     done
                 }
-                done
         }
 
     def p1(d: DataB, s: Proto2.P1): Done.type =
@@ -174,9 +176,10 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
                 s.finish()
         }
 
-    def cb(d: DataB, s: Proto1.C2): Done.type = s.sendResponse(d.respx).finish()
+    // TODO fresh APs not closed
+    def cb(d: DataB, s: Proto1.C2): Done.type = finishAndClose(s.sendResponse(d.respx))  // *...or close here
 
-    //override def afterClosed(): Unit = TestFib.shutdown.add(this.pid);
+    override def afterClosed(): Unit = TestFib.shutdown.add(this.pid);
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestFib.handleException(cause, addr, sid)
@@ -205,31 +208,28 @@ class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
     def c1(d: DataC1, s: Proto2.C11): Done.type = {
         s match {
             case Proto2.Request1C1(sid, role, x, s) =>
-
                 d.reqx = x
-                val done = if (d.reqx <= 2) {  // Asking for 1st or 2nd Fib number
-                    s.sendResponse1(1).finish()
+                if (d.reqx <= 2) {  // Asking for 1st or 2nd Fib number
+                    finishAndClose(s.sendResponse1(1))
                 } else {
                     // !!! cf. freeze s?
                     val (f, done) = freeze(s, (sid, r, a) => Proto2.C12(sid, r, a))
                     d.c12 = f
 
                     // !!! factor out
-                    val p2 = new Proto2.Proto2
-                    val aport = Ports.nextPort()
-                    p2.spawn(aport)
-
+                    val ap_Proto2 = new Proto2.Proto2
+                    val port_Proto2 = Ports.nextPort()
+                    ap_Proto2.spawn(port_Proto2)
                     Thread.sleep(500)
-                    registerP(this.port, "localhost", aport, d, p1)
+                    registerP(this.port, "localhost", port_Proto2, d, p1)
 
                     val c1port = Ports.nextPort()
                     val c2port = Ports.nextPort()
-                    new F1(s"F-1-${c1port}", c1port, aport).main(Array())
-                    new F2(s"F-2-${c2port}", c2port, aport).main(Array())
+                    new F1(s"F-1-${c1port}", c1port, port_Proto2).main(Array())
+                    new F2(s"F-2-${c2port}", c2port, port_Proto2).main(Array())
 
                     done
                 }
-                done
         }
     }
 
@@ -255,7 +255,7 @@ class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
                 s.finish()
         }
 
-    def cb(d: DataC1, s: Proto2.C12): Done.type = s.sendResponse1(d.respx).finish()
+    def cb(d: DataC1, s: Proto2.C12): Done.type = finishAndClose(s.sendResponse1(d.respx))
 
     //override def afterClosed(): Unit = TestFib.shutdown.add(this.pid);
 
@@ -281,8 +281,8 @@ class F2(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
         s match {
             case Proto2.Request2C2(sid, role, x, s) =>
                 d.reqx = x
-                val done = if (d.reqx <= 2) {
-                    s.sendResponse2(1).finish()
+                if (d.reqx <= 2) {
+                    finishAndClose(s.sendResponse2(1))
                 } else {
                     // !!! cf. freeze s?
                     val (f, done) = freeze(s, (sid, r, a) => Proto2.C22(sid, r, a))
@@ -301,7 +301,6 @@ class F2(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
 
                     done
                 }
-                done
         }
     }
 
@@ -322,17 +321,14 @@ class F2(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
             case Proto2.Response2P(sid, role, x, s) =>
                 d.respx = d.respx + x
                 d.c22 match {
-                    case _: Session.LinNone => // !!! type case
-                    case c2: Session.LinSome[Proto2.C22] =>
-                        become(d, c2, cb)
+                    case _: Session.LinNone =>
+                    case c2: Session.LinSome[_] => become(d, c2, cb)
                 }
                 s.finish()
         }
     }
 
-    def cb(d: DataC2, s: Proto2.C22): Done.type = {
-        s.sendResponse2(d.respx).finish()
-    }
+    def cb(d: DataC2, s: Proto2.C22): Done.type = finishAndClose(s.sendResponse2(d.respx))
 
     //override def afterClosed(): Unit = TestFib.shutdown.add(this.pid);
 
