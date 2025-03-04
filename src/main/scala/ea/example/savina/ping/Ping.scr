@@ -3,9 +3,6 @@
 
 module ea.example.savina.ping.Ping;
 
-data <scala> "String" from "" as String;
-data <scala> "Int" from "" as Int;
-data <scala> "Boolean" from "" as Boolean;
 
 // `become` not needed -- split Pinger/PongReceiver into two actors (so "self comm" => "explicit comm")
 global protocol Proto1(role C, role Pinger, role Ponger, role PongReceiver) {

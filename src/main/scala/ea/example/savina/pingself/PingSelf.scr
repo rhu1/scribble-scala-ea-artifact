@@ -4,10 +4,6 @@
 
 module ea.example.savina.pingself.PingSelf;
 
-data <scala> "String" from "" as String;
-data <scala> "Int" from "" as Int;
-data <scala> "Boolean" from "" as Boolean;
-
 
 global protocol Proto1(role Pinger, role Ponger) {
     Ping0() from Pinger to Ponger;

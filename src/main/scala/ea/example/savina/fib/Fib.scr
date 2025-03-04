@@ -1,0 +1,23 @@
+// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/fib/Fib.scr Proto1 -d test/scrib/out
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/fib/Fib.scr Proto2 -d test/scrib/out
+
+module ea.example.savina.fib.Fib;
+
+
+data <scala> "Int" from "" as Int;
+
+
+// P = "Main", C = top-most Fib actor
+global protocol Proto1(role P, role C) {
+    Request(Int) from P to C;
+    Response(Int) from C to P;
+}
+
+// P = some Fib actor, C1 = 1st child Fib actor, C2 = 2nd child Fib actor
+global protocol Proto2(role P, role C1, role C2) {
+    Request1(Int) from P to C1;
+    Request2(Int) from P to C2;
+    Response1(Int) from C1 to P;
+    Response2(Int) from C2 to P;
+}

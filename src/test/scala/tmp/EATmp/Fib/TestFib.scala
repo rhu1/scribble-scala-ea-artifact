@@ -63,7 +63,8 @@ object M extends Actor("MyM") with Fib1.ActorP {
         //s.sendRequest(2).suspend(d, m2)
         //s.sendRequest(3).suspend(d, m2)
         //s.sendRequest(7).suspend(d, m2)
-        s.sendRequest(10).suspend(d, m2)  // 55
+        //s.sendRequest(10).suspend(d, m2)  // 55
+        s.sendRequest(11).suspend(d, m2)
     }
     
     def m2(d: DataA, s: Fib1.P2): Done.type = {
@@ -95,6 +96,9 @@ object Ports {
     //val lock = new Object()
 
     def nextPort(): Int = {
+        if (ports >= 5555) {
+            throw new RuntimeException("Out of ports...")
+        }
         this.synchronized {
             ports = ports + 1
             ports
@@ -213,7 +217,7 @@ class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
                     p2.spawn(aport)
 
                     Thread.sleep(500)
-                    registerP(6666, "localhost", aport, d, p1)
+                    registerP(this.port, "localhost", aport, d, p1)
 
                     val c1port = Ports.nextPort()
                     val c2port = Ports.nextPort()
@@ -290,7 +294,7 @@ class F2(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
                     p2.spawn(aport)
 
                     Thread.sleep(500)
-                    registerP(6666, "localhost", aport, d, p1)
+                    registerP(this.port, "localhost", aport, d, p1)
 
                     val c1port = Ports.nextPort()
                     val c2port = Ports.nextPort()

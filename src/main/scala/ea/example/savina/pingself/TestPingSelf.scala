@@ -51,15 +51,15 @@ object TestPingSelf {
 }
 
 
-/* ... */
+/* C */
 
 case class Data_C() extends Session.Data
 
 object C extends Actor("MyC") with ActorC {
 
     def spawn(): Unit = {
-        spawn(TestPingSelf.PORT_C)
-        registerC(TestPingSelf.PORT_C, "localhost", TestPingSelf.PORT_ProtoC, Data_C(), c1)
+        this.spawn(TestPingSelf.PORT_C)
+        this.registerC(TestPingSelf.PORT_C, "localhost", TestPingSelf.PORT_ProtoC, Data_C(), c1)
     }
 
     def c1(d: Data_C, s: C1): Done.type = s.sendStart().suspend(d, c2)
@@ -76,7 +76,7 @@ object C extends Actor("MyC") with ActorC {
 }
 
 
-/* ... */
+/* Pinger */
 
 case class Data_Pinger(var rem: Int) extends Session.Data {
     var pingDecision: Boolean = true  // Decided+sent by PingDecisionMaker, stored by PingDecisionReceiver
@@ -88,10 +88,10 @@ object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionM
     val REPEATS = 2
 
     def spawn(): Unit = {
-        spawn(TestPingSelf.PORT_Pinger)
+        this.spawn(TestPingSelf.PORT_Pinger)
         val d = Data_Pinger(REPEATS)
-        registerPingDecisionMaker(TestPingSelf.PORT_Pinger, "localhost", TestPingSelf.PORT_ProtoC, d, maker1Init)
-        registerPingDecisionReceiver(TestPingSelf.PORT_Pinger, "localhost", TestPingSelf.PORT_ProtoC, d, pingDecisionReceiverInit)
+        this.registerPingDecisionMaker(TestPingSelf.PORT_Pinger, "localhost", TestPingSelf.PORT_ProtoC, d, maker1Init)
+        this.registerPingDecisionReceiver(TestPingSelf.PORT_Pinger, "localhost", TestPingSelf.PORT_ProtoC, d, pingDecisionReceiverInit)
     }
 
     def pinger1(d: Data_Pinger, s: Pinger1): Done.type = s.sendPing0().suspend(d, pinger2)
@@ -201,15 +201,15 @@ object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionM
 }
 
 
-/* ... */
+/* Ponger */
 
 case class Data_Ponger() extends Session.Data
 
 object Ponger extends Actor("MyPonger") with ActorPonger {
 
     def spawn(): Unit = {
-        spawn(TestPingSelf.PORT_Ponger)
-        registerPonger(TestPingSelf.PORT_Ponger, "localhost", TestPingSelf.PORT_Proto1, Data_Ponger(), pongerInit)
+        this.spawn(TestPingSelf.PORT_Ponger)
+        this.registerPonger(TestPingSelf.PORT_Ponger, "localhost", TestPingSelf.PORT_Proto1, Data_Ponger(), pongerInit)
     }
 
     def pongerInit(d: Data_Ponger, s: Ponger1Suspend): Done.type = s.suspend(d, ponger1)

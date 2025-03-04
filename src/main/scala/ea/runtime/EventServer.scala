@@ -5,6 +5,7 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.ByteBuffer
 import java.nio.channels.*
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 
 /*object TestEventServer {
@@ -73,6 +74,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         }
         val selector = Selector.open
         val serverSocket = ServerSocketChannel.open
+        //Try(serverSocket.bind(new InetSocketAddress ("localhost", port))).recover(x => { println(port); throw x })
         serverSocket.bind(new InetSocketAddress ("localhost", port))
         serverSocket.configureBlocking(false)
         serverSocket.register(selector, SelectionKey.OP_ACCEPT)
