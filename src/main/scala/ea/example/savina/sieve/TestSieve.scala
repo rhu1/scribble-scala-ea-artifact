@@ -33,11 +33,11 @@ object TestSieve {
         F1.main(Array())
         //F.main(Array())
 
-        /*for i <- 1 to 3 do println(s"Closed ${shutdown.take()}.")  // M, G and F1
+        for i <- 1 to 3 do println(s"Closed ${shutdown.take()}.")  // M, G and F1
         println(s"Closing ${ap_Proto1.nameToString()}...")
         ap_Proto1.close()
         println(s"Closing all Proto2 APs...")
-        Ports.closeAllProto2APs()*/
+        Ports.closeAllProto2APs()
     }
 
     def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
@@ -129,6 +129,7 @@ case class DataC() extends Session.Data {
     var f3: LinOption[Proto2.F3] = LinNone()
     var x: Int = -1
     var newPrime: Int = -1
+    var f13: LinOption[Proto1.F13] = LinNone()
 }
 
 object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
@@ -183,6 +184,16 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
         }
     }
 
+    def exitF13(d: DataC, s: Proto1.F13): Done.type = {
+        val end = s.sendAck();
+        ccc += 1
+        if (ccc == 2) {
+            finishAndClose(end)
+        } else {
+            end.finish()
+        }
+    }
+
     def exit(d: DataC, s: Proto2.F3): Done.type = {
         /*val end = s.sendExit2()
         Thread.sleep(500)
@@ -191,12 +202,19 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
         s.sendExit2().suspend(d, f4)
     }
 
+    private var ccc = 0
+
     def f4(d: DataC, s: Proto2.F4): Done.type = {
         s match {
             case Proto2.Ack2F(sid, role, s) =>
                 println("F1 got Ack2, closing")  // !!! don't send Proto1.Ack until here
                 Thread.sleep(500)
-                finishAndClose(s)
+                ccc += 1
+                if (ccc == 2) {
+                    finishAndClose(s)
+                } else {
+                    s.finish()
+                }
         }
     }
 
@@ -221,20 +239,31 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                 (0 until availableLocalPrimes).foreach(x => print(s"${localPrimes(x)} "))
                 println()
 
-                // !!! Actor(MyF1) Read from /127.0.0.1: 50834: SEND_Sieve1_1_G_F1_LongBox_3.SEND_Sieve1_1_G_F1_LongBox_5.SEND_Sieve1_1_G_F1_LongBox_7.SEND_Sieve1_1_G_F1_LongBox_9.SEND_Sieve1_1_G_F1_LongBox_11.SEND_Sieve1_1_G_F1_LongBox_13.SEND_Sieve1_1_G_F1_LongBox_15.SEND_Sieve1_1_G_F1_LongBox_17.SEND_Sieve1_1_G_F1_LongBox_19.SEND_Sieve1_1_G_F1_Exit_.
-                if (readyNext) {
-                    exitMatch(d)
+                if (!hasNext) {
+                    // TODO freeze for pendingExit?
+                    // !!! XXX cannot close until Fnext done... -- in generally need close permission ack msg
+                    //finishAndClose(s)
+                    /*val done = s.sendAck().finish() // !!! `exit` is doing close... (waits for Ack2 from Fnext)
                     Thread.sleep(500)
+                    done*/
+                    finishAndClose(s.sendAck())
                 } else {
-                    this.pendingExit = true  // CHECKME cf. theory?  concurrency between (async) register and become (of expected frozen)
-                }
 
-                // TODO freeze for pendingExit?
-                // !!! XXX cannot close until Fnext done... -- in generally need close permission ack msg
-                //finishAndClose(s)
-                val done = s.sendAck().finish()  // !!! `exit` is doing close... (waits for Ack2 from Fnext)
-                Thread.sleep(500)
-                done
+                    // !!! Actor(MyF1) Read from /127.0.0.1: 50834: SEND_Sieve1_1_G_F1_LongBox_3.SEND_Sieve1_1_G_F1_LongBox_5.SEND_Sieve1_1_G_F1_LongBox_7.SEND_Sieve1_1_G_F1_LongBox_9.SEND_Sieve1_1_G_F1_LongBox_11.SEND_Sieve1_1_G_F1_LongBox_13.SEND_Sieve1_1_G_F1_LongBox_15.SEND_Sieve1_1_G_F1_LongBox_17.SEND_Sieve1_1_G_F1_LongBox_19.SEND_Sieve1_1_G_F1_Exit_.
+                    if (readyNext) {
+                        ccc += 1
+                        s.sendAck().finish()
+                        exitMatch(d)
+                        //finishAndClose(s.sendAck())
+
+                        //Thread.sleep(500)
+                    } else {
+                        this.pendingExit = true // CHECKME cf. theory?  concurrency between (async) register and become (of expected frozen)
+                        val (a, done) = freeze(s, (sid, r, a) => Proto1.F13(sid, r, a))
+                        d.f13 = a
+                        done
+                    }
+                }
 
             case Proto1.LongBoxF1(sid, role, x, s) => {
                 //println(s"(${sid}) B received L1.")
@@ -328,8 +357,16 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                     s3 = s3.sendLongBox2(this.buff(i))
                 }
 
+                //val done =
                 if (this.pendingExit) {
-                    exit(d, s3)
+                    println("\nAAAAAAAAAAAAAAAAAA\n")
+
+                    val done = exit(d, s3)
+
+                    d.f13 match {
+                        case _: Session.LinNone => done // skip
+                        case y: Session.LinSome[_] => become(d, y, exitF13)
+                    }
                 } else {
                     val (a, done) = freeze(s3, (sid, r, a) => Proto2.F3(sid, r, a))
                     d.f3 = a
@@ -374,6 +411,7 @@ case class DataD() extends Session.Data {
     var f3: LinOption[Proto2.F3] = LinNone()
     var x: Int = -1
     var newPrime: Int = -1
+    var fn4: LinOption[Proto2.Fnext4] = LinNone()
 }
 
 class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with Proto2.ActorF with Proto2.ActorFnext {
@@ -424,8 +462,18 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
         s match {
             case Proto2.Ack2F(sid, role, s) =>
                 Thread.sleep(500)
+
+                d.fn4 match {
+                    case _: Session.LinNone =>  // skip
+                    case y: Session.LinSome[_] => become(d, y, exitfn4)
+                }
+
                 finishAndClose(s)
         }
+    }
+
+    def exitfn4(d: DataD, s: Proto2.Fnext4): Done.type = {
+        s.sendAck2().finish()
     }
 
     def n3(d: DataD, s: Proto2.Fnext3): Done.type = {
@@ -435,19 +483,25 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                 (0 until availableLocalPrimes).foreach(x => print(s"${localPrimes(x)} "))
                 println()
 
-                if (readyNext) {
-                    d.f3 match {
-                        case _: Session.LinNone => throw new RuntimeException("missing frozen")
-                        case y: Session.LinSome[Proto2.F3] =>
-                            become(d, y, exit)
-                    }
+                if (!hasNext) {
+                    //val done = s.sendAck2().finish() // !!! `exit` is doing close... (waits for Ack2 from Fnext)  // XXX don't send our Ack2 until got an Ack2 from neighbor if any
+                    //Thread.sleep(500)
+                    //done
+                    finishAndClose(s.sendAck2())
                 } else {
-                    this.pendingExit = true
+                    if (readyNext) {
+                        d.f3 match {
+                            case _: Session.LinNone => throw new RuntimeException("missing frozen")
+                            case y: Session.LinSome[Proto2.F3] =>
+                                become(d, y, exit)
+                        }
+                    } else {
+                        this.pendingExit = true
+                        val (a, done) = freeze(s, (sid, r, a) => Proto2.Fnext4(sid, r, a))
+                        d.fn4 = a
+                        done
+                    }
                 }
-
-                val done = s.sendAck2().finish() // !!! `exit` is doing close... (waits for Ack2 from Fnext)  // XXX don't send our Ack2 until got an Ack2 from neighbor if any
-                Thread.sleep(500)
-                done
 
             case Proto2.LongBox2Fnext(sid, role, x, s) => {
                 //println(s"(${sid}) B received L1.")
@@ -552,7 +606,8 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
         }
     }
 
-    //override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
+    override def afterClosed(): Unit = //TestSieve.shutdown.add(this.pid)
+        println(s"Closed ${this.pid}")
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestSieve.handleException(cause, addr, sid)
