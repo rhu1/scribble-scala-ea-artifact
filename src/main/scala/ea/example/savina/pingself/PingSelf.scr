@@ -1,0 +1,46 @@
+// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/pingself/PingSelf.scr Proto1 -d test/scrib/out
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/pingself/PingSelf.scr ProtoC -d test/scrib/out
+
+module ea.example.savina.pingself.PingSelf;
+
+data <scala> "String" from "" as String;
+data <scala> "Int" from "" as Int;
+data <scala> "Boolean" from "" as Boolean;
+
+
+global protocol Proto1(role Pinger, role Ponger) {
+    Ping0() from Pinger to Ponger;
+    Pong0() from Ponger to Pinger;
+    do Proto1Aux(Pinger, Ponger);
+}
+
+aux global protocol Proto1Aux(role Pinger, role Ponger) {
+    choice at Pinger {  // become Pinger from PingDecisionReceiver and choose according case
+        Ping() from Pinger to Ponger;
+        Pong() from Ponger to Pinger;
+        // Pinger become PingDecisionMaker
+        do Proto1Aux(Pinger, Ponger);
+    } or {
+        Stop() from Pinger to Ponger;
+    }
+}
+
+// Pinger = PingDecisionMaker = PingDecisionReceiver
+global protocol ProtoC(role C, role PingDecisionMaker, role PingDecisionReceiver) {
+    Start() from C to PingDecisionReceiver;
+    do ProtoCAux(C, PingDecisionMaker, PingDecisionReceiver);
+}
+
+aux global protocol ProtoCAux(role C, role PingDecisionMaker, role PingDecisionReceiver) {
+    // become PingDecisionMaker from Pinger and make decision
+    choice at PingDecisionMaker {
+        Ping() from PingDecisionMaker to PingDecisionReceiver;  // !!! self comm
+        // PingDecisionReceiver become Pinger and choose this case
+        do ProtoCAux(C, PingDecisionMaker, PingDecisionReceiver);
+    } or {
+        StopC() from PingDecisionMaker to PingDecisionReceiver;  // !!! extra, sort of -- should be PingDecisionMaker to Ponger (we're doing from Pinger -- fine because self-comm just leads to comm from Pinger to Ponger)
+        // PingDecisionReceiver become Pinger and choose this case
+        StopC() from PingDecisionMaker to C;
+    }
+}
