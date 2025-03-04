@@ -64,9 +64,7 @@ object M extends Actor("MyM") with Proto1.ActorM {
 
     def m2(d: Data_M, s: Proto1.M2): Done.type =
         s match {
-            case Proto1.ExitM(sid, role, s) =>
-                //Thread.sleep(1000)
-                finishAndClose(s)
+            case Proto1.ExitM(sid, role, s) => finishAndClose(s)
         }
 
     override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
@@ -82,6 +80,8 @@ case class Data_G() extends Session.Data
 
 object G extends Actor("MyG") with Proto1.ActorG {
 
+    val NUM = 100
+
     def main(args: Array[String]): Unit = {
         this.spawn(TestSieve.PORT_G)
         this.registerG(TestSieve.PORT_G, "localhost", TestSieve.PORT_Proto1, Data_G(), g1Suspend)
@@ -94,7 +94,7 @@ object G extends Actor("MyG") with Proto1.ActorG {
             case Proto1.StartG(sid, role, s) =>
                 var s2 = s.sendNewPrime(2)
                 var candidate: Int = 3
-                while (candidate < 30) {
+                while (candidate < NUM) {
                     s2 = s2.sendLongBox(candidate)
                     candidate = candidate + 2
                 }
@@ -136,7 +136,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
 
     // These two imply local is full
     private var hasNext: Boolean = false
-    private val buff: collection.mutable.ListBuffer[Int] = collection.mutable.ListBuffer()  // Cache for sending when Proto2 ready
+    private val buff: collection.mutable.ListBuffer[Int] = collection.mutable.ListBuffer()  // Cache until Proto2 ready then send
     private var readyNext: Boolean = false
 
     private var pendingExit: Boolean = false  // Proto1 exited while Proto2 still being set up
@@ -164,7 +164,6 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
     def f12(d: Data_F1, s: Proto1.F12): Done.type = {
         s match {
             case Proto1.ExitF1(sid, role, s) =>
-                //localPrimes.foreach(x => print(s"${x} "))
                 println(s"${nameToString()} received Exit: ${(0 until availableLocalPrimes).foldLeft("")((x, y) => x + localPrimes(y).toString + " ")}")
                 val end = s.sendAck()
                 this.sentAck = true
@@ -184,18 +183,12 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                 }
 
             case Proto1.LongBoxF1(sid, role, x, s) => {
-                // if locally prime and [ if has Fnext become Sieve2.F and send Longbox
-                //                        else if space store as locally prime else spawn Fnext ]
-                // else skip
-                println(s"F1 locallyPrime ${x} ${isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)}")
                 if (isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)) {
                     if (this.readyNext) {  // i.e., local already full
-                        println(s"F1 should pass ${x}...")
                         // become
                         d.f3 match {
                             case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
                             case y: Session.LinSome[Proto2.F3] =>
-                                println(s"F1 passing ${x}")
                                 d.x = x
                                 become(d, y, f3LongBox)
                         }
@@ -203,11 +196,9 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                         if (storeLocally()) {
                             this.localPrimes(this.availableLocalPrimes) = x
                             this.availableLocalPrimes += 1
-                            println(s"F1 stored locally ${x}, ${this.availableLocalPrimes}")
                         } else {
                             this.buff += x // TODO put in Data, cf. d.newPrime
                             if (!this.hasNext) {
-                                println(s"F1 spawning next ${x}")
                                 val bport = Ports.spawnFreshProto2AP()
                                 registerF(TestSieve.PORT_F1, "localhost", bport, d, f1Init)
 
@@ -241,10 +232,8 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
             case Proto2.ReadyF(sid, role, s) =>
                 this.readyNext = true
 
-                println(s"F1 sending new prime ${this.buff}")
                 var s3 = s.sendNewPrime(this.buff(0))
                 for (i <- 1 until this.buff.length) {
-                    println(s"F1 sending longbox $i ${this.buff(i)}")
                     s3 = s3.sendLongBox2(this.buff(i))
                 }
 
@@ -266,17 +255,13 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
         done
 
     // become
-    def sendExit2(d: Data_F1, s: Proto2.F3): Done.type = {
-        println(s"F1 waiting for Ack2...")
-        s.sendExit2().suspend(d, f4)
-    }
+    def sendExit2(d: Data_F1, s: Proto2.F3): Done.type = s.sendExit2().suspend(d, f4)
 
     // Pre: hasNext => receive Ack2 from Fnext
     // Can enter via Proto1 Exit or Proto2 pendingExit
     def f4(d: Data_F1, s: Proto2.F4): Done.type = {
         s match {
             case Proto2.Ack2F(sid, role, s) =>
-                println("F1 got Ack2, closing")  // !!! don't send Proto1.Ack until here
                 this.receivedAck2 = true
                 if (canClose) {
                     finishAndClose(s)
@@ -335,8 +320,8 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
 
     // These two imply local is full
     private var hasNext: Boolean = false
-    private val buff: collection.mutable.ListBuffer[Int] = collection.mutable.ListBuffer()  // Cache for sending when Proto2 ready
     private var readyNext: Boolean = false
+    private val buff: collection.mutable.ListBuffer[Int] = collection.mutable.ListBuffer()  // Cache until Proto2 ready then send
 
     private var pendingExit: Boolean = false  // Proto1 exited while Proto2 still being set up
     private var sentAck: Boolean = false
@@ -352,7 +337,6 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
     def n2(d: DataD, s: Proto2.Fnext2): Done.type =
         s match {
             case Proto2.NewPrimeFnext(sid, role, x, s) =>
-                println(s"F got new prime ${x}")
                 // save x in locals
                 this.localPrimes(availableLocalPrimes) = x  // i = 0
                 this.availableLocalPrimes += 1
@@ -381,10 +365,8 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                 }
 
             case Proto2.LongBox2Fnext(sid, role, x, s) => {
-                println(s"F locallyPrime ${x} ${isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)}")
                 if (isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)) {
                     if (readyNext) {
-                        println(s"F passing ${x}")
                         // become
                         d.f3 match {
                             case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
@@ -396,12 +378,10 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                         if (storeLocally()) {
                             this.localPrimes(this.availableLocalPrimes) = x // i = 0
                             this.availableLocalPrimes = this.availableLocalPrimes + 1
-                            println(s"F stored locally ${x}, ${this.availableLocalPrimes}")
                         } else {
                             this.buff += x
                             if (this.hasNext) {
                             } else {
-                                println(s"F spawning next ${x}")
                                 val bport = Ports.spawnFreshProto2AP()
                                 registerF(port, "localhost", bport, d, f1Init)
 
@@ -430,7 +410,7 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
         true
     }
 
-    def storeLocally(): Boolean = availableLocalPrimes < numMaxLocalPrimes
+    def storeLocally(): Boolean = this.availableLocalPrimes < this.numMaxLocalPrimes
 
     def f1Init(d: DataD, s: Proto2.F1Suspend): Done.type = {
         s.suspend(d, f1)
@@ -441,10 +421,8 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
             case Proto2.ReadyF(sid, role, s) =>
                 this.readyNext = true
 
-                println(s"F1 sending new prime ${this.buff}")
                 var s3 = s.sendNewPrime(this.buff(0))
                 for (i <- 1 until this.buff.length) {
-                    println(s"F1 sending longbox $i ${this.buff(i)}")
                     s3 = s3.sendLongBox2(this.buff(i))
                 }
 
@@ -482,8 +460,9 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
     }
 
     // Sent Ack2 to F and if hasNext then received Ack2 from Fnext
-    override def afterClosed(): Unit = //TestSieve.shutdown.add(this.pid)
-        println(s"Closed ${this.pid}")
+    override def afterClosed(): Unit =
+        //TestSieve.shutdown.add(this.pid)
+        println(s"Closed ${this.pid}.")
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestSieve.handleException(cause, addr, sid)
