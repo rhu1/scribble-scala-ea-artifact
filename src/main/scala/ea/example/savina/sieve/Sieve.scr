@@ -1,0 +1,45 @@
+// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/sieve/Sieve.scr Proto1 -d test/scrib/out
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/sieve/Sieve.scr Proto2 -d test/scrib/out
+
+module ea.example.savina.sieve.Sieve;
+
+
+data <scala> "Int" from "" as Int;
+
+
+// M = "Main", G = Generator, F1 = 1st filter
+global protocol Proto1(role M, role G, role F1) {
+    Start() from M to G;
+    NewPrime(Int) from G to F1;
+    do Proto1Aux(M, G, F1);
+}
+
+aux global protocol Proto1Aux(role M, role G, role F1) {
+    choice at G {
+        LongBox(Int) from G to F1;  // FIXME Long
+        do Proto1Aux(M, G, F1);
+    } or {
+        Exit() from G to F1;
+        Ack() from F1 to G;  // !!! else F doesn't know when close is safe... (F maybe slow)
+        Exit() from G to M;
+    }
+}
+
+
+// F = "Prev" filter, Fnext = "Next" filter
+global protocol Proto2(role F, role Fnext) {
+    Ready() from Fnext to F;  // Redundant? (cf. pendingExit)
+    NewPrime(Int) from F to Fnext;
+    do Proto2Aux(F, Fnext);
+}
+
+aux global protocol Proto2Aux(role F, role Fnext) {
+    choice at F {
+        LongBox2(Int) from F to Fnext;  // FIXME Long
+        do Proto2Aux(F, Fnext);
+    } or {
+        Exit2() from F to Fnext;
+        Ack2() from Fnext to F;  // !!! else F doesn't know when close is safe... (F maybe slow)
+    }
+}

@@ -22,6 +22,7 @@ aux global protocol Proto1Aux(role Pinger, role Ponger) {
     }
 }
 
+
 // Pinger = PingDecisionMaker = PingDecisionReceiver
 global protocol ProtoC(role C, role PingDecisionMaker, role PingDecisionReceiver) {
     Start() from C to PingDecisionReceiver;

@@ -27,8 +27,8 @@ object TestFib {
 
         //M.debug = true
         //F.debug = true
-        M.main(Array())
         F.main(Array())
+        M.main(Array())
 
         for i <- 1 to 2 do println(s"Closed ${shutdown.take()}.")  // M and F
         println(s"Closing ${ap_Proto1.nameToString()}...")
