@@ -1,30 +1,33 @@
 package ea.example.savina.dining
 
-import ea.example.savina.dining.Dining.Proto1.Proto1
-import ea.example.savina.dining.Dining.Proto2.Proto2
+import ea.example.savina.dining.Dining.Proto1
+import ea.example.savina.dining.Dining.Proto2
 import ea.runtime.Session.*
 import ea.runtime.{Actor, Done, Net, Session}
 
 import java.net.SocketAddress
+import java.util.concurrent.LinkedTransferQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
 object TestDining {
-    
+
     val PORT_Proto1 = 8888
     val PORT_Proto2 = 9999
     val PORT_M = 7777
     val PORT_A = 6666
 
+    val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
+
     def main(args: Array[String]): Unit = {
-        val ap_Proto1 = new Proto1
+        val ap_Proto1 = new Proto1.Proto1
         ap_Proto1.spawn(PORT_Proto1)
-        val ap_Proto2 = new Proto2
+        val ap_Proto2 = new Proto2.Proto2
         ap_Proto2.spawn(PORT_Proto2)
-        
+
         Thread.sleep(500)
 
-        val xN = 5
-        val xM = 3
+        val xN = 5  // #philosophers
+        val xM = 3  // #courses
         val M = new M(xN)
         val A = new A(xN)
 
@@ -33,11 +36,17 @@ object TestDining {
         M.main(Array())
         A.main(Array())
 
-        val Ps = Array.tabulate[F](xN)(i => {
-            val loopActor = new F(i + 1, s"P-${i}", 4444+i, xM)
+        val Ps = Array.tabulate[Phil](xN)(i => {
+            val loopActor = new Phil(i + 1, s"P-${i}", 4444+i, xM)
             loopActor.main(Array())
             loopActor
         })
+
+        for i <- 1 to 2 + xN do println(s"Closed ${shutdown.take()}.")  // M, A and n philosophers
+        println(s"Closing ${ap_Proto1.nameToString()}...")
+        ap_Proto1.close()
+        println(s"Closing ${ap_Proto2.nameToString()}...")
+        ap_Proto2.close()
     }
 
     def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
@@ -53,7 +62,7 @@ object TestDining {
 
 case class Data_M() extends Session.Data
 
-class M(val N: Int) extends Actor("MyM") with Dining.Proto1.ActorM {
+class M(val N: Int) extends Actor("MyM") with Proto1.ActorM {
 
     private var count = 0
 
@@ -66,7 +75,7 @@ class M(val N: Int) extends Actor("MyM") with Dining.Proto1.ActorM {
         }
     }
 
-    def m1(d: Data_M, s: Dining.Proto1.M1): Done.type = {
+    def m1(d: Data_M, s: Proto1.M1): Done.type = {
         val s2 = s.sendStart()
         this.count = this.count + 1
         if (this.count == this.N) {
@@ -78,7 +87,7 @@ class M(val N: Int) extends Actor("MyM") with Dining.Proto1.ActorM {
 
     }
 
-    //override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
+    override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestDining.handleException(cause, addr, sid)
@@ -90,7 +99,7 @@ class M(val N: Int) extends Actor("MyM") with Dining.Proto1.ActorM {
 case class DataA() extends Session.Data
 
 // numForks = numPhils = N
-class A(val numForks: Int) extends Actor("MyA") with Dining.Proto2.ActorA {
+class A(val numForks: Int) extends Actor("MyA") with Proto2.ActorA {
 
     // Move to Data?
     private val forks = Array.tabulate(numForks)(i => new AtomicBoolean(false))
@@ -104,12 +113,12 @@ class A(val numForks: Int) extends Actor("MyA") with Dining.Proto2.ActorA {
         }
     }
 
-    def a1Init(d: DataA, s: Dining.Proto2.A1Suspend): Done.type = s.suspend(d, a1)
+    def a1Init(d: DataA, s: Proto2.A1Suspend): Done.type = s.suspend(d, a1)
 
-    def a1(d: DataA, s: Dining.Proto2.A1): Done.type = {
+    def a1(d: DataA, s: Proto2.A1): Done.type = {
         //println(s"(${s.sid}) A sending L1...")
         s match {
-            case Dining.Proto2.Hungry0A(sid, role, x, s) =>
+            case Proto2.Hungry0A(sid, role, x, s) =>
                 val leftFork = forks(x-1)  // !!! -1
                 val rightFork = forks((x) % numForks)
 
@@ -128,9 +137,9 @@ class A(val numForks: Int) extends Actor("MyA") with Dining.Proto2.ActorA {
         }
     }
 
-    def a3(d: DataA, s: Dining.Proto2.A3): Done.type = {
+    def a3(d: DataA, s: Proto2.A3): Done.type = {
         s match {
-            case Dining.Proto2.HungryDA(sid, role, x, s) =>
+            case Proto2.HungryDA(sid, role, x, s) =>
                 val leftFork = forks(x-1)  // !!! -1
                 val rightFork = forks((x) % numForks)
 
@@ -149,9 +158,9 @@ class A(val numForks: Int) extends Actor("MyA") with Dining.Proto2.ActorA {
         }
     }
 
-    def a4(d: DataA, s: Dining.Proto2.A4): Done.type = {
+    def a4(d: DataA, s: Proto2.A4): Done.type = {
         s match {
-            case Dining.Proto2.DoneA(sid, role, x, s) =>
+            case Proto2.DoneA(sid, role, x, s) =>
                 val leftFork = forks(x-1)  // !!! -1
                 val rightFork = forks((x) % numForks)
                 leftFork.set(false)
@@ -161,9 +170,9 @@ class A(val numForks: Int) extends Actor("MyA") with Dining.Proto2.ActorA {
         }
     }
 
-    def a5(d: DataA, s: Dining.Proto2.A5): Done.type = {
+    def a5(d: DataA, s: Proto2.A5): Done.type = {
         s match {
-            case Dining.Proto2.HungryEA(sid, role, x, s) =>
+            case Proto2.HungryEA(sid, role, x, s) =>
                 val leftFork = forks(x-1)  // !!! forks
                 val rightFork = forks((x) % numForks)
 
@@ -179,7 +188,7 @@ class A(val numForks: Int) extends Actor("MyA") with Dining.Proto2.ActorA {
                         s.sendEat().suspend(d, a4)
                     }
                 done
-            case Dining.Proto2.ExitA(sid, role, s) =>
+            case Proto2.ExitA(sid, role, s) =>
                 numExitedPhilosophers = numExitedPhilosophers + 1
                 Thread.sleep(500)
                 if (numForks == numExitedPhilosophers) {
@@ -189,51 +198,51 @@ class A(val numForks: Int) extends Actor("MyA") with Dining.Proto2.ActorA {
                 }
         }
     }
-    
-    //override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
+
+    override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestDining.handleException(cause, addr, sid)
 }
 
 
-/* B */
+/* Philosopher */
 
-case class DataB() extends Session.Data
+case class Data_Phil() extends Session.Data
 
-class F(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}") with Dining.Proto2.ActorP with Dining.Proto1.ActorP1 {
+class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}") with Proto2.ActorP with Proto1.ActorP1 {
 
     def main(args: Array[String]): Unit = {
-        spawn(port)
-        println(s"P ${id} spawned.")
-        registerP1(port, "localhost", 8888, DataB(), p11Init)  // !!! mutable data
+        spawn(this.port)
+        println(s"P ${this.id} spawned.")
+        registerP1(this.port, "localhost", TestDining.PORT_Proto1, Data_Phil(), p11Init)  // !!! mutable data
     }
 
-    def p11Init(d: DataB, s: Dining.Proto1.P11Suspend): Done.type = {
+    def p11Init(d: Data_Phil, s: Proto1.P11Suspend): Done.type = {
         s.suspend(d, p11)
     }
 
-    def p11(d: DataB, s: Dining.Proto1.P11): Done.type = {
+    def p11(d: Data_Phil, s: Proto1.P11): Done.type = {
         println(s"Phil ${id} starting...")
         s match {
-            case Dining.Proto1.StartP1(sid, role, s) =>
+            case Proto1.StartP1(sid, role, s) =>
                 println(s"Phil ${id} started.")
-                registerP(port, "localhost", 9999, DataB(), p1)
+                registerP(port, "localhost", TestDining.PORT_Proto2, Data_Phil(), p1)
                 s.finish()
         }
     }
 
-    def p1(d: DataB, s: Dining.Proto2.P1): Done.type = {
+    def p1(d: Data_Phil, s: Proto2.P1): Done.type = {
         println(s"Phil ${id} hungry0.")
         s.sendHungry0(id).suspend(d, p2)
     }
 
-    def p2(d: DataB, s: Dining.Proto2.P2): Done.type = {
+    def p2(d: Data_Phil, s: Proto2.P2): Done.type = {
         s match {
-            case Dining.Proto2.DeniedP(sid, role, s) =>
+            case Proto2.DeniedP(sid, role, s) =>
                 println(s"Phil ${id} denied. hungryD")
                 s.sendHungryD(id).suspend(d, p2)
-            case Dining.Proto2.EatP(sid, role, s) =>
+            case Proto2.EatP(sid, role, s) =>
                 rem = rem - 1
                 val s5 = s.sendDone(id)
                 println(s"Phil ${id} done eating -- remaining ${rem}.")
@@ -248,7 +257,7 @@ class F(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends Act
         }
     }
 
-    //override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
+    override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestDining.handleException(cause, addr, sid)
