@@ -7,6 +7,7 @@ import ea.runtime.{Actor, Done, Net, Session}
 
 import java.net.SocketAddress
 import java.util.concurrent.LinkedTransferQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 object TestSieve {
 
@@ -21,7 +22,7 @@ object TestSieve {
     def main(args: Array[String]): Unit = {
         val ap_Proto1 = new Proto1.Proto1
         ap_Proto1.spawn(PORT_Proto1)
-        
+
         Thread.sleep(500)
 
         //M.debug = true
@@ -54,7 +55,7 @@ object M extends Actor("MyM") with Proto1.ActorM {
     }
 
     def m1(d: DataA, s: Proto1.M1): Done.type = s.sendStart().suspend(d, m2)
-    
+
     def m2(d: DataA, s: Proto1.M2): Done.type =
         s match {
             case Proto1.ExitM(sid, role, s) =>
@@ -112,23 +113,6 @@ object G extends Actor("MyG") with Proto1.ActorG {
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestSieve.handleException(cause, addr, sid)
-}
-
-
-/* ... */
-
-// FIXME need distributed port allocation
-object Ports {
-    // cf. AtomicInteger
-    var ports = 3333;
-    //val lock = new Object()
-
-    def nextPort(): Int = {
-        this.synchronized {
-            ports = ports + 2  // !!! AP needs two ports?
-            ports
-        }
-    }
 }
 
 
@@ -289,13 +273,14 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                                 //d.newPrime = x
                                 this.buff += x
 
-                                val p2 = new Proto2.Proto2
+                                /*val p2 = new Proto2.Proto2
                                 //p2.debug = true
                                 val bport = Ports.nextPort()
                                 p2.spawn(bport) // !!! close afterwards
 
                                 println(s"F1 111")
-                                Thread.sleep(500)
+                                Thread.sleep(500)*/
+                                val bport = Ports.spawnFreshProto2AP()
                                 registerF(5555, "localhost", bport, d, f1Init)
 
                                 println(s"F1 222 ${bport}")
@@ -351,6 +336,29 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestSieve.handleException(cause, addr, sid)
+}
+
+
+/* ... */
+
+// TODO consider distributed port allocation
+object Ports {
+
+    private val ports = AtomicInteger(3333);
+    private val proto2APs = collection.mutable.ListBuffer[Proto2.Proto2]()
+
+    def nextPort(): Int = this.ports.addAndGet(2)
+
+    def spawnFreshProto2AP(): Int = {
+        val ap_Proto2 = new Proto2.Proto2
+        val port_Proto2 = nextPort()
+        ap_Proto2.spawn(port_Proto2)
+        this.proto2APs += ap_Proto2
+        Thread.sleep(500)
+        port_Proto2
+    }
+
+    def closeAllProto2APs(): Unit = this.proto2APs.foreach(x => x.close())
 }
 
 
@@ -468,11 +476,12 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
                                 //d.newPrime = x
                                 this.buff += x
 
-                                val p2 = new Proto2.Proto2
+                                /*val p2 = new Proto2.Proto2
                                 val bport = Ports.nextPort()
                                 p2.spawn(bport) // !!! close afterwards
 
-                                Thread.sleep(500)
+                                Thread.sleep(500)*/
+                                val bport = Ports.spawnFreshProto2AP()
                                 registerF(port, "localhost", bport, d, f1Init)
 
                                 val nport = Ports.nextPort()
