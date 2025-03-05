@@ -92,6 +92,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         this.sockets += c.getLocalAddress
     }
 
+    // TODO consider Data
     def afterClosed(): Unit = {}
 
     def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
