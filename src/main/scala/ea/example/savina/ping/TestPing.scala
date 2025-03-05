@@ -9,10 +9,10 @@ import java.util.concurrent.LinkedTransferQueue
 object TestPing {
 
     val PORT_Proto1 = 8888
-    val PORT_C = 5555;
-    val PORT_Pinger = 6666;
-    val PORT_PongReceiver = 7777;
-    val PORT_Ponger = 9999;
+    val PORT_C = 5555
+    val PORT_Pinger = 6666
+    val PORT_PongReceiver = 7777
+    val PORT_Ponger = 9999
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
