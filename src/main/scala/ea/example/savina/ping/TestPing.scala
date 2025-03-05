@@ -126,6 +126,20 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
     def pongReceiverInit(d: Data_Receiver, s: PongReceiver1Suspend): Done.type =
         s.suspend(d, pongReceiver1or3)
 
+    //def pongReceiver1or3[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type = {
+    def pongReceiver1or3[T](d: Data_Receiver, s: T)(implicit ev: PongReceiver1or3[T]): Done.type = {
+        ev.print(s)
+        if (d.rem <= 0) {
+            //stop(d, s)
+            ev.stop(this, d, s)
+        } else {
+            d.rem = d.rem - 1
+            println(s"${nameToString()} sending PingC, remaining ${d.rem}...")
+            //sendPingC(d, s)
+            ev.sendPingC(this, d, s)
+        }
+    }
+
     sealed trait PongReceiver1or3[T] {
         def print(s: T): Unit =
             s match { // No longer exhaustively checked?
@@ -149,20 +163,6 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
     object PongReceiver1or3 {
         implicit val T_1: PongReceiver1or3[PongReceiver1] = new PongReceiver1or3[PongReceiver1] {}
         implicit val T_3: PongReceiver1or3[PongReceiver3] = new PongReceiver1or3[PongReceiver3] {}
-    }
-
-    //def pongReceiver1or3[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type = {
-    def pongReceiver1or3[T](d: Data_Receiver, s: T)(implicit ev: PongReceiver1or3[T]): Done.type = {
-        ev.print(s)
-        if (d.rem <= 0) {
-            //stop(d, s)
-            ev.stop(this, d, s)
-        } else {
-            d.rem = d.rem - 1
-            println(s"${nameToString()} sending PingC, remaining ${d.rem}...")
-            //sendPingC(d, s)
-            ev.sendPingC(this, d, s)
-        }
     }
 
     /*def stop[T: PongReceiver1or3](d: Data_Receiver, s: T): Done.type =
