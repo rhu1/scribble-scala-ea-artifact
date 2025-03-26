@@ -1,0 +1,15 @@
+// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/id/Id.scr Proto1 -d test/scrib/out
+
+module ea.example.id.Id;
+
+
+data <scala> "Int" from "" as Int;
+data <scala> "String" from "" as String;
+
+
+global protocol Proto1(role S, role C) {
+    IDRequest(String) from C to S;
+    IDResponse(Int) from S to C;
+    do Proto1(S, C);
+}

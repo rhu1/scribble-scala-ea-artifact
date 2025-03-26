@@ -126,9 +126,9 @@ case class Data_F1() extends Session.Data {
 
 object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
 
-    // TODO Data -- also factor out with F
     val numMaxLocalPrimes = 3
 
+    // TODO Data (per session) -- also factor out with F
     private val localPrimes = new Array[Long](numMaxLocalPrimes)
     private var availableLocalPrimes = 0
 
