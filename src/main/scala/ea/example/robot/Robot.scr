@@ -1,0 +1,45 @@
+// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/robot/Robot.scr Proto1 -d test/scrib/out
+
+module ea.example.robot.Robot;
+
+
+data <scala> "String" from "" as String;
+
+
+global protocol Proto1(role R, role D, role W) {
+    WantD(String) from R to D;
+    WantW(String) from R to W;  // !!!  // XXX
+    choice at D {
+        Busy(String) from D to R;
+        Cancel(String) from D to W;  // !!!
+    } or {
+        // fork
+        // [D] Open door
+        GoIn(String) from D to R;
+        Prepare(String) from D to W;
+
+        // join -- !!! testing async message arrival handler installed
+        // [R] Drive in
+        Inside(String) from R to D;
+        // [D] Close door
+        Prepared(String) from W to D;
+
+        Deliver(String) from D to W;
+        // [W] Lock table
+        Delivered(String) from W to R;
+        // [R] Take part
+
+        // fork
+        PartTaken(String) from R to W;
+        WantLeave(String) from R to D;
+
+        // join
+        // [D] Open door
+        GoOut(String) from D to R;
+        // [R] Drive out
+        Outside(String) from R to D;
+        // [D] Close door
+        TableIdle(String) from W to D;
+    }
+}

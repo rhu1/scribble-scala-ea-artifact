@@ -1,0 +1,54 @@
+// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/shoprestock/Shop.scr Proto1 -d test/scrib/out
+// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/shoprestock/Shop.scr Proto2 -d test/scrib/out
+
+module ea.example.shoprestock.Shop;
+
+
+data <scala> "String" from "" as String;
+
+
+//!!! -fair
+global protocol Proto1(role C, role S, role P)
+{
+    ReqItems(String) from C to S;
+    Items(String) from S to C;
+    do Proto1Aux(C, S, P);
+}
+
+aux global protocol Proto1Aux(role C, role S, role P)
+{
+    choice at C {
+        GetItemInfo(String) from C to S;
+        ItemInfo(String) from S to C;
+        do Proto1Aux(C, S, P);
+    } or {
+        Checkout(String) from C to S;
+        choice at S {
+            Processing(String) from S to C;
+            Buy(String) from S to P;
+            choice at P {
+                OK(String) from P to S;
+                OKc(String) from S to C;  // delivery date
+                do Proto1Aux(C, S, P);
+            } or {
+                Declined(String) from P to S;
+                Declinedc(String) from S to C;  // insufficient funds
+                do Proto1Aux(C, S, P);
+            }
+        } or {
+            OutOfStock(String) from S to C;
+            do Proto1Aux(C, S, P);
+        }
+    }
+}
+
+global protocol Proto2(role SS, role SF) {
+    choice at SS {
+        AddItem(String) from SS to SF;
+        do Proto2(SS, SF);
+    } or {
+        RemoveItem(String) from SS to SF;
+        do Proto2(SS, SF);
+    }
+}
