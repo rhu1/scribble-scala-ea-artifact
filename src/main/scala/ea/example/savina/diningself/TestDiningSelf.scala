@@ -208,7 +208,11 @@ object PhilPorts {
     }
 }
 
-case class Data_Phil() extends Session.Data
+case class Data_Phil() extends Session.Data {
+    var s1: Session.LinOption[Proto3.S11] = Session.LinNone()
+    //var s2: Session.LinOption[Proto3.S21Suspend] = Session.LinNone()
+    var p5: Session.LinOption[Proto2.P5] = Session.LinNone()
+}
 
 class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}")
     with Proto2.ActorP with Proto1.ActorP1 with Proto3.ActorS1 with Proto3.ActorS2 {
@@ -226,14 +230,32 @@ class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends 
         spawn(this.port)
         println(s"P ${this.id} spawned.")
 
-        registerS1(this.port, "localhost", port_self, Data_Phil(), s11)
-        registerS2(this.port, "localhost", port_self, Data_Phil(), s21Init)
+        val d = Data_Phil()
+        registerS1(this.port, "localhost", port_self, d, s11)
+        registerS2(this.port, "localhost", port_self, d, s21Init)
 
-        registerP1(this.port, "localhost", TestDiningSelf.PORT_Proto1, Data_Phil(), p11Init)
+        //registerP1(this.port, "localhost", TestDiningSelf.PORT_Proto1, Data_Phil(), p11Init)
     }
 
     def s11(d: Data_Phil, s: Proto3.S11): Done.type =
-        s.sendSelfStart() //.finish  // XXX closes the session including receive side...
+        //s.sendSelfStart() //.finish  // XXX closes the session including receive side...
+        //Done
+        val (a, done) = Session.freeze(s,
+            (sid: Session.Sid, role: Session.Role, a: Actor) => Proto3.S11(sid, role, a))
+        d.s1 = a
+
+        registerP1(this.port, "localhost", TestDiningSelf.PORT_Proto1, d, p11Init)
+        done
+
+    def s1Start(d: Data_Phil, s: Proto3.S11): Done.type =
+        val s1 = s.sendSelfStart()
+        val (a, done) = Session.freeze(s1,
+            (sid: Session.Sid, role: Session.Role, a: Actor) => Proto3.S11(sid, role, a))
+        d.s1 = a
+        done
+
+    def s1Exit(d: Data_Phil, s: Proto3.S11): Done.type =
+        val s1 = s.sendSelfExit() //.finish  // XXX closes the session including receive side...
         Done
 
     def s21Init(d: Data_Phil, s: Proto3.S21Suspend): Done.type = s.suspend(d, s21)
@@ -241,11 +263,21 @@ class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends 
     def s21(d: Data_Phil, s: Proto3.S21): Done.type = {
         s match {
             case Proto3.SelfStartS2(sid, role, s) =>
-                println(s"Phil ${id} self-comm...")
-                //registerP1(this.port, "localhost", TestDiningSelf.PORT_Proto1, Data_Phil(), p11Init)
+                //println(s"Phil ${id} self-comm...")
+
+                d.p5 match {
+                    case y: Session.LinSome[_] => Session.become(d, y, p5Hungry)
+                    case _: Session.LinNone => throw new RuntimeException("Critical error p5Hungry...")
+                }
+
+                s.suspend(d, s21)
+            case Proto3.SelfExitS2(sid, role, s) =>
                 s.finish()
         }
     }
+
+    def p5Hungry(d: Data_Phil, s: Proto2.P5): Done.type =
+        s.sendHungryE(id).suspend(d, p2)
 
     def p11Init(d: Data_Phil, s: Proto1.P11Suspend): Done.type = s.suspend(d, p11)
 
@@ -254,7 +286,7 @@ class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends 
         s match {
             case Proto1.StartP1(sid, role, s) =>
                 println(s"Phil ${id} started.")
-                registerP(port, "localhost", TestDiningSelf.PORT_Proto2, Data_Phil(), p1)
+                registerP(port, "localhost", TestDiningSelf.PORT_Proto2, d, p1)
                 s.finish()
         }
     }
@@ -275,11 +307,29 @@ class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends 
                 println(s"Phil ${id} done eating -- remaining ${rem}.")
                 if (rem <= 0) {
                     val end = s5.sendExit()
+
+                    d.s1 match {
+                        case y: Session.LinSome[_] => Session.become(d, y, s1Exit)
+                        case _: Session.LinNone => throw new RuntimeException("Critical error s1Exit...")
+                    }
+
                     //Thread.sleep(500)
                     finishAndClose(end)
                 } else {
                     println(s"Phil ${id} hungryE")
-                    s5.sendHungryE(id).suspend(d, p2)
+
+                    //s5.sendHungryE(id).suspend(d, p2)
+                    // freeze P5
+                    // become S1
+                    val (a, done) = Session.freeze(s5,
+                        (sid: Session.Sid, role: Session.Role, a: Actor) => Proto2.P5(sid, role, a))
+                    d.p5 = a
+
+                    d.s1 match {
+                        case _: Session.LinNone => throw new RuntimeException("Critical error s1Start...")
+                        case y: Session.LinSome[_] => Session.become(d, y, s1Start)
+                    }
+
                 }
         }
     }

@@ -15,10 +15,18 @@ trait ActorS1 extends Actor {
 case class S11(sid: Session.Sid, role: Session.Role, actor: Actor) extends Session.OState[Actor] {
 
     @throws[IOException]
-    def sendSelfStart(): EndS1 = {
+    def sendSelfStart(): S11 = {
         checkNotUsed()
         val pay = ""
         actor.sendMessage(sid, "S1", "S2", "SelfStart", pay)
+        S11(sid, "S1", actor)
+    }
+
+    @throws[IOException]
+    def sendSelfExit(): EndS1 = {
+        checkNotUsed()
+        val pay = ""
+        actor.sendMessage(sid, "S1", "S2", "SelfExit", pay)
         EndS1(sid, "S1", actor)
     }
 }

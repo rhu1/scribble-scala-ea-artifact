@@ -217,7 +217,7 @@ class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends 
         s match {
             case Proto1.StartP1(sid, role, s) =>
                 println(s"Phil ${id} started.")
-                registerP(port, "localhost", TestDining.PORT_Proto2, Data_Phil(), p1)
+                registerP(port, "localhost", TestDining.PORT_Proto2, d, p1)
                 s.finish()
         }
     }

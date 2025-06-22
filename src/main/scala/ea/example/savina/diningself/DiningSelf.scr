@@ -42,5 +42,10 @@ aux global protocol Proto2Aux(role P, role A) {
 
 // Phil self-comm
 global protocol Proto3(role S1, role S2) {
-    SelfStart() from S1 to S2;
+    choice at S1 {
+        SelfStart() from S1 to S2;  // "Start" is bad name...
+        do Proto3(S1, S2);
+    } or {
+        SelfExit() from S1 to S2;
+    }
 }
