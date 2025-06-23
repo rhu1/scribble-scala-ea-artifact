@@ -9,7 +9,7 @@ import java.util.concurrent.LinkedTransferQueue
 object TestShop {
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
-    
+
     def main(args: Array[String]): Unit = {
         println("Hello")
 
@@ -28,9 +28,9 @@ object TestShop {
 
         P.spawn()
         C.spawn()
-        
-        // Only waiting for Shop -- but fake, Shop protocol is non-terminating
-        println(s"Closed ${shutdown.take()}.")
+
+        // Server protocol is non-terminating by default -- but actors can be closed from external
+        for i <- 1 to 4 do println(s"Closed ${shutdown.take()}.")  // C, P, SF, S
         println(s"Closing ${proto1.nameToString()}...")
         proto1.close()
         println(s"Closing ${proto2.nameToString()}...")
@@ -98,6 +98,8 @@ object C extends Actor("Customer") with Proto1.ActorC {
             case Proto1.DeclinedcC(sid, role, x, s) => c3(d, s)
         }
     }
+
+    override def afterClosed(): Unit = TestShop.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
@@ -240,8 +242,7 @@ val port = 6666
         }
     }
 
-    override def afterClosed(): Unit =
-        TestShop.shutdown.add(this.pid)
+    override def afterClosed(): Unit = TestShop.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
@@ -275,6 +276,8 @@ object SF extends Actor("Staff") with Proto2.ActorSF {
             case Proto2.RemoveItemSF(sid, role, x, s) => s.suspend(d, sf1)
         }
     }
+
+    override def afterClosed(): Unit = TestShop.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
@@ -312,6 +315,8 @@ object P extends Actor("PaymentProcessor") with Proto1.ActorP {
                 }
         }
     }
+
+    override def afterClosed(): Unit = TestShop.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")

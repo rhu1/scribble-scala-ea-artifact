@@ -114,6 +114,7 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
     }
 
     var out: Session.LinOption[Proto2.C21] = Session.LinNone()
+    private var runThread = true
 
     // !!! out stream -- cache/become necessary
     def c2_1(d: DataC, s: Proto2.C21): Done.type = {
@@ -135,16 +136,21 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
 
     // async-become maybe nicer instead of spawn
     def timer(d: DataC): Unit = {
-        Thread.sleep(2000)
-        this.out match {
-            case y: Session.LinSome[_] =>  // Proto2.C21
-                Session.become(d, y, c2_1aux)
-            case _: Session.LinNone => throw new RuntimeException("missing frozen")  // cf. error handling?
+        while (runThread) {
+            Thread.sleep(2000)
+            this.out match {
+                case y: Session.LinSome[_] => // Proto2.C21
+                    Session.become(d, y, c2_1aux)
+                case _: Session.LinNone => throw new RuntimeException("missing frozen") // cf. error handling?
+            }
         }
-        timer(d)
+        //timer(d)
     }
 
-    //override def afterClosed(): Unit = shutdown.add(this.pid);
+    override def afterClosed(): Unit = {
+        runThread = false
+        TestChatServer.shutdown.add(this.pid)
+    }
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")

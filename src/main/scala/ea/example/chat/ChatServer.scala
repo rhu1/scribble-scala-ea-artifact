@@ -26,9 +26,10 @@ object TestChatServer {
         //ap1.debug = true
         ap1.spawn(PORT_Proto1)
 
-        val server = new ChatServer("Server", PORT_S)
+        /*val server = new ChatServer("Server", PORT_S)
         //server.debug = true
-        server.spawn()
+        server.spawn()*/
+        ChatServer.spawn()
 
         val c1 = new ChatClient("client1", PORT_C1)
         //c1.debug = true
@@ -40,8 +41,12 @@ object TestChatServer {
         val d2 = c2.spawn()
         c2.run(d2, TestChatServer.PORT_Proto1)
 
-        // Only waiting for server -- but fake, server protocol is non-terminating
-        println(s"Closed ${shutdown.take()}.")
+        // Only waiting for Server -- protocol non-terminating but actor can be externally closed
+        println(s"Closed ${shutdown.take()}.")  // ChatServer
+        c1.enqueueClose()
+        c2.enqueueClose()
+
+        for i <- 1 to 2 do println(s"Closed ${shutdown.take()}.")  // C1, C2
         println(s"Closing ${ap1.nameToString()}...")
         ap1.close()
     }
@@ -71,7 +76,10 @@ class DataS extends Session.Data {
 
 trait Registry extends Proto1.ActorS
 
-class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry {
+//class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry {
+object ChatServer extends Actor("Server") with Registry {
+
+    val port: Net.Port = TestChatServer.PORT_S
 
     def spawn(): Unit = {
         val d = new DataS
@@ -88,6 +96,9 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
     // cf. TestFib Ports spawnFreshProto2AP / closeAllProto2APs
     private val ap2s = collection.mutable.ListBuffer[Proto2.Proto2]()
     private val ap3s = collection.mutable.ListBuffer[Proto3.Proto3]()
+    private val rooms = collection.mutable.ListBuffer[ChatRoom]()
+
+    val shutdownRooms: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def s1(d: DataS, s: Proto1.S1): Done.type = {
         s match {
@@ -108,8 +119,8 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
                     val (apPort1, apPort2) = ServerPorts.nextAPPort()
                     val ap2 = new Proto2.Proto2
                     val ap3 = new Proto3.Proto3
-                    ap2s :+ ap2
-                    ap3s :+ ap3
+                    ap2s += ap2
+                    ap3s += ap3
                     //ap2.debug = true
                     //ap3.debug = true
                     ap2.spawn(apPort1)
@@ -119,6 +130,7 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
 
                     val rPort = ServerPorts.nextRoomPort()
                     val room = new ChatRoom(pid, rPort, apPort1, apPort2)
+                    rooms += room
                     //room.debug = true
                     room.spawn()
 
@@ -134,6 +146,10 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
     }
 
     override def afterClosed(): Unit =
+        println(s"Closing ${rooms} ...")
+        rooms.foreach(_.enqueueClose())
+        for i <- 1 to rooms.length do println(s"Closed ${shutdownRooms.take()}.")  // Rs
+
         println(s"Closing ${ap2s} ...")
         ap2s.foreach(_.close())
         println(s"Closing ${ap3s} ...")

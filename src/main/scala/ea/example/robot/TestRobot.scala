@@ -4,12 +4,15 @@ import ea.runtime.{Actor, Done, Net, Session}
 import ea.example.robot.Robot.Proto1
 
 import java.net.SocketAddress
+import java.util.concurrent.LinkedTransferQueue
 
 object TestRobot {
 
     val PORT_Proto1 = 8888
     val PORT_D = 6666
     val PORT_R = 7777
+
+    val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
         println("Hello")
@@ -24,14 +27,24 @@ object TestRobot {
         W.spawn()
 
         var i = 1
-        while (true) {  // Non-terminating
+        val rs = collection.mutable.ListBuffer[R]()
+        //while (true) {  // Non-terminating
+        while (shutdown.isEmpty) { // Non-terminating by default
             val r1 = new R(s"robot${i}", PORT_R + i)
             //r1.debug = true
+            rs += r1
             r1.spawn()
             Thread.sleep(1000)
             i += 1
         }
 
+        println(s"Closed ${shutdown.take()}.")  // W
+        door.enqueueClose()
+        rs.foreach(_.enqueueClose())
+
+        for i <- 1 to (rs.length + 1) do println(s"Closed ${shutdown.take()}.")  // D, Rs
+        println(s"Closing ${ap1.nameToString()}...")
+        ap1.close()
     }
 }
 
@@ -81,6 +94,8 @@ class R(pid: String, val port: Net.Port) extends Actor(pid) with Proto1.ActorR {
                 finishAndClose(s.sendOutside("outside"))
         }
     }
+
+    override def afterClosed(): Unit = TestRobot.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
@@ -162,6 +177,8 @@ class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extend
         }
     }
 
+    override def afterClosed(): Unit = TestRobot.shutdown.add(this.pid)
+
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
@@ -219,6 +236,8 @@ object W extends Actor("Warehouse") with Proto1.ActorW {
                 s.sendTableIdle("idle").finish()
         }
     }
+
+    override def afterClosed(): Unit = TestRobot.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")

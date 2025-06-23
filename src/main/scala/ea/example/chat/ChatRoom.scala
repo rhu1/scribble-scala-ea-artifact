@@ -69,6 +69,8 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort1: Net.Port, apPort2: Net.Por
         done
     }
 
+    override def afterClosed(): Unit = ChatServer.shutdownRooms.add(this.pid);
+
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")

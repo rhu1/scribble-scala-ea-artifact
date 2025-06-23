@@ -18,9 +18,11 @@ object Net {  // Used by EventDrivenServer
 
 object Util {
 
-    def spawn(f: () => Unit): Unit = {
-        new Thread {
-            override def run: Unit = f()
-        }.start()
+    def spawn(f: () => Unit): Thread = {
+        val t = new Thread {
+            override def run(): Unit = f()
+        }
+        t.start()
+        t
     }
 }

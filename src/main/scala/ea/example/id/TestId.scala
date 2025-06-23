@@ -5,12 +5,15 @@ import ea.runtime.Session.*
 import ea.runtime.{Actor, Done, Net, Session}
 
 import java.net.SocketAddress
+import java.util.concurrent.LinkedTransferQueue
 
 object TestId {
 
     val PORT_Proto1 = 8888
     val PORT_S = 7777
     val PORT_C = 6666
+
+    val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
         val ap_Proto1 = new Proto1.Proto1
@@ -21,17 +24,21 @@ object TestId {
         //S.debug = true
         //C.debug = true
         S.main(Array());
-        while (true) {  // Non-terminating
+        //while (true) {  // Non-terminating
+        val cs = collection.mutable.ListBuffer[C]()
+        while (shutdown.isEmpty) { // Non-terminating by default
             val port = Ports.nextPort()
-            new C(s"C-${port}", port).main(Array()) // !!! FIXME _ in names not allowed
+            val c = new C(s"C-${port}", port)
+            cs += c
+            c.main(Array()) // !!! FIXME _ in names not allowed
             Thread.sleep(2000)
         }
 
-        /*for i <- 1 to 3 do println(s"Closed ${shutdown.take()}.")  // M, G and F1
+        cs.foreach(_.enqueueClose())
+
+        for i <- 1 to (cs.length + 1) do println(s"Closed ${shutdown.take()}.")  // S and Cs
         println(s"Closing ${ap_Proto1.nameToString()}...")
         ap_Proto1.close()
-        println(s"Closing all Proto2 APs...")
-        Ports.closeAllProto2APs()*/
     }
 
     def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
@@ -98,7 +105,7 @@ object S extends Actor("MyS") with Proto1.ActorS {
                 s.sendIDResponse(d.get()).suspend(d, s1)
         }
 
-    //override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
+    override def afterClosed(): Unit = TestId.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestId.handleException(cause, addr, sid)
@@ -128,7 +135,7 @@ class C(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Proto1.ActorC {
                 c1(d, s)
         }
 
-    //override def afterClosed(): Unit = shutdown.add(this.pid)
+    override def afterClosed(): Unit = TestId.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestId.handleException(cause, addr, sid)
