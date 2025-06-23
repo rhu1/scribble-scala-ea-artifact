@@ -6,14 +6,14 @@ import java.nio.channels.{Selector, SocketChannel}
 import scala.util.Try
 
 
-object TestAP {
+/*object TestAP {
     def main(args: Array[String]): Unit = {
         println("hello")
         val p1 = new AP("Proto1", Set("A", "B"))
         p1.init(8888)
         p1.runSelectLoop()
     }
-}
+}*/
 
 
 class AP(val proto: Session.Global, val rs: Set[Session.Role])

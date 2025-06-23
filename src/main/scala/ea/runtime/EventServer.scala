@@ -59,15 +59,18 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     private var fServerSocket: Option[ServerSocketChannel] = None
     private var fSelector: Option[Selector] = None
 
+    private var port: Int = -1
+
     def spawn(port: Int): Unit = {
-        init(port)
-        Util.spawn(() => runSelectLoop())
+        this.port = port
+        init()
+        Util.spawn(() => runSelectLoop())  // FIXME: isSelecting set concurrently
     }
 
     // ...integrate into run?
     // Pre: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
-    private[runtime] def init(port: Int): Unit = {
+    private[runtime] def init(): Unit = {
         if (this.isSelecting) {  // Implies this.selector and this.serverSocket not None (via run)
             errPrintln("Already isSelecting, cannot init again")
             return
@@ -360,7 +363,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     def debugToString(x: String): String = s"${nameToString()} ${x}"
 
     //def nameToString(): String = s"Actor(${name})"
-    def nameToString(): String = this.name
+    def nameToString(): String = s"${this.name}:${port}"
 
 
 
