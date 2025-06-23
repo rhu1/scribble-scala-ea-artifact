@@ -24,7 +24,7 @@ object TestRobot {
         W.spawn()
 
         var i = 1
-        while (true) {
+        while (true) {  // Non-terminating
             val r1 = new R(s"robot${i}", PORT_R + i)
             //r1.debug = true
             r1.spawn()

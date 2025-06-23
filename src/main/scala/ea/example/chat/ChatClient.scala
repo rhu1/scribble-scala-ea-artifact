@@ -7,7 +7,7 @@ import ea.example.chat.Chat.{Proto1, Proto2, Proto3}
 import java.net.SocketAddress
 
 
-object TestChatClient {
+/*object TestChatClient {
 
     val PORT_C1 = 7777
     val PORT_C2 = 7779
@@ -25,7 +25,7 @@ object TestChatClient {
         val d2 = c2.spawn()
         c2.run(d2, TestChatServer.PORT_Proto1)
     }
-}
+}*/
 
 
 /* ... */
@@ -35,7 +35,7 @@ object ChatClient {
     def main(args: Array[String]): Unit = {
         println("hello")
 
-        val port = if (args.length < 1) TestChatClient.PORT_C1 else args(0).toInt
+        val port = if (args.length < 1) TestChatServer.PORT_C1 else args(0).toInt
         val user = if (args.length < 2) "user" else args(1)
         val sAPPort = if (args.length < 3) TestChatServer.PORT_Proto1 else args(2).toInt
         val client = new ChatClient(user, port)
@@ -143,6 +143,8 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
         }
         timer(d)
     }
+
+    //override def afterClosed(): Unit = shutdown.add(this.pid);
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")

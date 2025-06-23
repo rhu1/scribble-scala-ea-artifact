@@ -21,7 +21,7 @@ object TestId {
         //S.debug = true
         //C.debug = true
         S.main(Array());
-        while (true) {
+        while (true) {  // Non-terminating
             val port = Ports.nextPort()
             new C(s"C-${port}", port).main(Array()) // !!! FIXME _ in names not allowed
             Thread.sleep(2000)
@@ -128,7 +128,7 @@ class C(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Proto1.ActorC {
                 c1(d, s)
         }
 
-    //override def afterClosed(): Unit = TestSieve.shutdown.add(this.pid)
+    //override def afterClosed(): Unit = shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestId.handleException(cause, addr, sid)

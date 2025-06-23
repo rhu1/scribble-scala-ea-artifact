@@ -4,9 +4,12 @@ import ea.runtime.{Actor, Done, Session}
 import ea.example.shoprestock.Shop.{Proto1, Proto2}
 
 import java.net.SocketAddress
+import java.util.concurrent.LinkedTransferQueue
 
 object TestShop {
 
+    val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
+    
     def main(args: Array[String]): Unit = {
         println("Hello")
 
@@ -25,6 +28,13 @@ object TestShop {
 
         P.spawn()
         C.spawn()
+        
+        // Only waiting for Shop -- but fake, Shop protocol is non-terminating
+        println(s"Closed ${shutdown.take()}.")
+        println(s"Closing ${proto1.nameToString()}...")
+        proto1.close()
+        println(s"Closing ${proto2.nameToString()}...")
+        proto2.close()
     }
 }
 
@@ -229,6 +239,9 @@ val port = 6666
             case Proto1.DeclinedS(sid, role, x, s) => s.sendDeclinedc("insufficient funds").suspend(d, s3)
         }
     }
+
+    override def afterClosed(): Unit =
+        TestShop.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")

@@ -5,13 +5,19 @@ import ea.runtime.Net.{Pid, Port}
 import ea.example.chat.Chat.{Proto1, Proto2, Proto3}
 
 import java.net.SocketAddress
+import java.util.concurrent.LinkedTransferQueue
 import scala.collection.mutable
 
 
 object TestChatServer {
 
-    val PORT_S = 8888
     val PORT_Proto1 = 9997
+    val PORT_S = 8888
+
+    val PORT_C1 = 7777
+    val PORT_C2 = 7779
+
+    val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
         println("hello")
@@ -23,6 +29,21 @@ object TestChatServer {
         val server = new ChatServer("Server", PORT_S)
         //server.debug = true
         server.spawn()
+
+        val c1 = new ChatClient("client1", PORT_C1)
+        //c1.debug = true
+        val d1 = c1.spawn()
+        c1.run(d1, TestChatServer.PORT_Proto1)
+
+        val c2 = new ChatClient("client2", PORT_C2)
+        //c2.debug = true
+        val d2 = c2.spawn()
+        c2.run(d2, TestChatServer.PORT_Proto1)
+
+        // Only waiting for server -- but fake, server protocol is non-terminating
+        println(s"Closed ${shutdown.take()}.")
+        println(s"Closing ${ap1.nameToString()}...")
+        ap1.close()
     }
 }
 
@@ -63,6 +84,11 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
         s.suspend(d, s1)
     }
 
+
+    // cf. TestFib Ports spawnFreshProto2AP / closeAllProto2APs
+    private val ap2s = collection.mutable.ListBuffer[Proto2.Proto2]()
+    private val ap3s = collection.mutable.ListBuffer[Proto3.Proto3]()
+
     def s1(d: DataS, s: Proto1.S1): Done.type = {
         s match {
             case Proto1.LookupRoomS(sid, role, x, s) =>
@@ -82,6 +108,8 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
                     val (apPort1, apPort2) = ServerPorts.nextAPPort()
                     val ap2 = new Proto2.Proto2
                     val ap3 = new Proto3.Proto3
+                    ap2s :+ ap2
+                    ap3s :+ ap3
                     //ap2.debug = true
                     //ap3.debug = true
                     ap2.spawn(apPort1)
@@ -104,6 +132,13 @@ class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry 
                 s.finish()
         }
     }
+
+    override def afterClosed(): Unit =
+        println(s"Closing ${ap2s} ...")
+        ap2s.foreach(_.close())
+        println(s"Closing ${ap3s} ...")
+        ap3s.foreach(_.close())
+        TestChatServer.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
