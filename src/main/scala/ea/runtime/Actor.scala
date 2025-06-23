@@ -426,6 +426,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
     private val iotadones = collection.mutable.Set[(Session.Sid, Net.Liota)]()
 
+    // Can be "concurrently" tried from APCLIENT and CONNECT if active not established in between
     def checkIotaDone(client: SocketChannel, iota: Net.Liota, sid: Session.Sid, rr: Session.Role, selector: Selector): Unit = {
 
         if (iotadones.contains((sid, iota))) {
