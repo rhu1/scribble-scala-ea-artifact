@@ -59,19 +59,26 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
             val iota = split(4)
             debugPrintln(s"Parsed: ${op} ${sid} ${rr} ${iota}")
 
-            this.initSync(sid) += rr
-            if (this.initSync(sid) == rs) {
-                this.initSync -= sid
+            def fff(): Unit = {
+                if (this.initSync.contains(sid)) {
+                    this.initSync(sid) += rr
+                    if (this.initSync(sid) == rs) {
+                        this.initSync -= sid
 
-                val find = this.chi2.zipWithIndex.find(x => x._1._1 == sid).get
-                this.chi2.remove(find._2)
-                val conns = find._1._2
-                for ((k, v) <- conns) {
-                    val msg = s"APDONE_${sid._1}_${sid._2}_${k}_${v._4}"
-                    write(v._1, msg)
-                    v._1.close()
+                        val find = this.chi2.zipWithIndex.find(x => x._1._1 == sid).get
+                        this.chi2.remove(find._2)
+                        val conns = find._1._2
+                        for ((k, v) <- conns) {
+                            val msg = s"APDONE_${sid._1}_${sid._2}_${k}_${v._4}"
+                            write(v._1, msg)
+                            v._1.close()
+                        }
+                    }
+                } else {
+                    enqueueForSelectLoop(fff)
                 }
             }
+            fff()
 
         } else if (op == "SERVER") {
             val proto1: Session.Global = split(1)
@@ -158,34 +165,36 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
                 this.chi2 += this.chi(get._2)
                 this.chi.remove(get._2)
 
-                return  // !!!
+                //return  // !!!
+            } else {
+
+                val find2 = this.chi.zipWithIndex.find(x => !x._1._2.contains(r))
+                if (find2.isDefined) {
+                    val get = find2.get
+                    val (sid, reqs) = get._1
+
+                    val mm = s"HEY_${sid._1}_${sid._2}_${r}_${iota}" // FIXME factor out with above
+                    write(socket, mm)
+
+                    //val tmp: Seq[(SocketChannel, Net.Host, Net.Port)] = reqs(r)
+                    reqs += (r -> (socket, host, port, iota))
+                    debugPrintln(s"Added to chi(${sid}): ${reqs}")
+
+                    //return // !!!
+                } else {
+
+                    val index = nextIndex()
+                    val sid: Session.Sid = (proto, index) // !!!
+
+                    this.initSync(sid) = collection.mutable.Set[Session.Role]()
+
+                    val mm = s"HEY_${sid._1}_${sid._2}_${r}_${iota}" // FIXME factor out
+                    write(socket, mm)
+
+                    val tmp = collection.mutable.Map[Session.Role, (SocketChannel, Net.Host, Net.Port, Net.Liota)](r -> (socket, host, port, iota))
+                    this.chi += ((sid, tmp))
+                }
             }
-
-            val find2 = this.chi.zipWithIndex.find(x => !x._1._2.contains(r))
-            if (find2.isDefined) {
-                val get = find2.get
-                val (sid, reqs) = get._1
-
-                val mm = s"HEY_${sid._1}_${sid._2}_${r}_${iota}"  // FIXME factor out with above
-                write(socket, mm)
-
-                //val tmp: Seq[(SocketChannel, Net.Host, Net.Port)] = reqs(r)
-                reqs += (r -> (socket, host, port, iota))
-                debugPrintln(s"Added to chi(${sid}): ${reqs}")
-
-                return  // !!!
-            }
-
-            val index = nextIndex()
-            val sid: Session.Sid = (proto, index)  // !!!
-
-            this.initSync(sid) = collection.mutable.Set[Session.Role]()
-
-            val mm = s"HEY_${sid._1}_${sid._2}_${r}_${iota}"  // FIXME factor out
-            write(socket, mm)
-
-            val tmp = collection.mutable.Map[Session.Role, (SocketChannel, Net.Host, Net.Port, Net.Liota)](r -> (socket, host, port, iota))
-            this.chi += ((sid, tmp))
 
         } else {
             debugPrintln(s"Unknown op: ${op}")
