@@ -21,6 +21,7 @@ object TestDining {
 
     def main(args: Array[String]): Unit = {
         val ap_Proto1 = new Proto1.Proto1
+        ap_Proto1.debug = true
         ap_Proto1.spawn(PORT_Proto1)
         val ap_Proto2 = new Proto2.Proto2
         ap_Proto2.spawn(PORT_Proto2)
