@@ -424,7 +424,13 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
         }*/
     }
 
+    private val iotadones = collection.mutable.Set[(Session.Sid, Net.Liota)]()
+
     def checkIotaDone(client: SocketChannel, iota: Net.Liota, sid: Session.Sid, rr: Session.Role, selector: Selector): Unit = {
+
+        if (iotadones.contains((sid, iota))) {
+            return
+        }
 
         if (this.active.contains(sid) && this.active(sid).contains(rr)) {
             return
@@ -437,6 +443,8 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
             val rs = this.active.getOrElseUpdate(sid, collection.mutable.Set())
             rs += rr
             dispatchInitHandler(sid, rr)  // XXX do "session handler reg" here (or perhaps before connecting?) but "session sends" after APDONE...*/
+
+            iotadones += ((sid, iota))
 
             val pay = s"IOTADONE_${sid._1}_${sid._2}_${rr}_${iota}"
             write(client, pay)
