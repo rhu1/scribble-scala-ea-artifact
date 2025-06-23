@@ -36,7 +36,7 @@ object TestDining {
         //M.debug = true
         //A.debug = true
         val Ps = Array.tabulate[Phil](N)(i => {
-            //Thread.sleep(100)
+            Thread.sleep(1000)
             val loopActor = new Phil(i + 1, s"P-${i}", 4444+i, C)
             loopActor.main(Array())
             loopActor
