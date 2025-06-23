@@ -226,7 +226,7 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
     //def sendMessage[T](sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: T): Unit = {
     //def sendMessage[T <: Serializable](sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: List[T]): Unit = {
     def sendMessage(sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: String): Unit = {
-            debugPrintln(s"Sockets: ${sockets}")
+        debugPrintln(s"Sockets: ${sockets}")
         debugPrintln(s"Sending message to ${sid}[${dst}]: ${op}(${pay})")
 
         // FIXME HERE IOException

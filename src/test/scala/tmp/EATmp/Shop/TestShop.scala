@@ -147,7 +147,7 @@ val port = 6666
         custReqHandler(d, s)
     }
 
-    sealed trait S1orS3[T]
+    sealed trait S1orS3[T] {}
     object S1orS3 {
         implicit val T_S1: S1orS3[S1] = new S1orS3[S1] {}
         implicit val T_S3: S1orS3[S3] = new S1orS3[S3] {}
@@ -187,9 +187,9 @@ val port = 6666
                             d.oos = x
                             // !!! assumes staff established -- Option vs. affine
                             d.ss1 match {
-                                case _: Session.LinNone => // !!! type case
-                                case y: Session.LinSome[ShopProto2.SS1] =>
+                                case y: Session.LinSome[_] =>  // ShopProto2.SS1
                                     Session.become(d, y, restockHandler)  // [[d.ss1]].become(d, ss1)
+                                case _: Session.LinNone => // !!! type case
                             }
                             sus.suspend(d, custReqHandler[S3])
                         }

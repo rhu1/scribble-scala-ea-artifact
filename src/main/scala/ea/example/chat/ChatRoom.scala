@@ -45,9 +45,9 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort1: Net.Port, apPort2: Net.Por
                 d.log += x
                 d.out.keySet.foreach(x =>
                     d.out(x) match {
-                        case y: Session.LinSome[Proto3.R31] =>
+                        case y: Session.LinSome[_] =>  // Proto3.R31
                             Session.become(d, y, bc)
-                        case _: Session.LinNone => ()
+                        case _: Session.LinNone => throw new RuntimeException("missing frozen")
                     }
                 )
                 s.suspend(d, r2_1)

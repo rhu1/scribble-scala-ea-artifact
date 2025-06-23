@@ -112,10 +112,10 @@ object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionM
                 d.p3 = a
 
                 d.m1 match {
-                    case _: Session.LinNone => // !!! type case
-                    case y: Session.LinSome[PingDecisionMaker1] =>
+                    case y: Session.LinSome[_] =>  // PingDecisionMaker1
                         println("\nfoo1\n")
                         Session.become(d, y, maker1)
+                    case _: Session.LinNone => throw new RuntimeException("missing frozen")// !!! type case
                 }
 
                 done
@@ -143,10 +143,10 @@ object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionM
                 d.p3 = a
 
                 d.m1 match {
-                    case _: Session.LinNone => // !!! type case
-                    case y: Session.LinSome[PingDecisionMaker1] =>
+                    case y: Session.LinSome[_] =>  // PingDecisionMaker1
                         println("\nfoo1\n")
                         Session.become(d, y, maker1)
+                    case _: Session.LinNone => throw new RuntimeException("missing frozen")  // !!! type case
                 }
 
                 done
@@ -207,9 +207,9 @@ object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionM
 
         // become Pinger
         d.p3 match {
-            case _: Session.LinNone => // !!! type case
-            case y: Session.LinSome[Pinger3] =>
+            case y: Session.LinSome[_] =>  // Pinger3
                 Session.become(d, y, pinger3)
+            case _: Session.LinNone => throw new RuntimeException("missing frozen")  // !!! type case
         }
 
         done.get

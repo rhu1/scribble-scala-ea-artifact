@@ -241,9 +241,9 @@ class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
             case Proto2.Response2P(sid, role, x, s) =>
                 d.x_resp += x
                 d.c12 match {
-                    case _: Session.LinNone =>
-                    case c2: Session.LinSome[Proto2.C12] =>
+                    case c2: Session.LinSome[_] =>  // Proto2.C12
                         become(d, c2, cb)
+                    case _: Session.LinNone => throw new RuntimeException("missing frozen")
                 }
                 s.finish()
         }

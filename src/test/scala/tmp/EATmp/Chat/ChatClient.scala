@@ -149,9 +149,10 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
     def timer(d: DataC): Unit = {
         Thread.sleep(2000)
         this.out match {
-            case _: Session.LinNone => ()  // cf. error handling?
-            case y: Session.LinSome[ChatProto2.C21] =>
+            case y: Session.LinSome[_] =>  // ChatProto2.C21
                 Session.become(d, y, c2_1aux)
+            case _: Session.LinNone => throw new RuntimeException("missing frozen")
+  // cf. error handling?
         }
         timer(d)
     }

@@ -169,9 +169,9 @@ object F extends Actor("MyF") with Fib1.ActorC with Fib2.ActorP {
             case Fib2.Response2P(sid, role, x, s) =>
                 d.respx = d.respx + x
                 d.c2 match {
-                    case _: Session.LinNone => // !!! type case
-                    case c2: Session.LinSome[Fib1.C2] =>
+                    case c2: Session.LinSome[_] =>  // Fib1.C2
                         become(d, c2, cb)
+                    case _: Session.LinNone => throw new RuntimeException("missing frozen")  // !!! type case
                 }
                 s.finish()
         }
@@ -247,9 +247,9 @@ class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
             case Fib2.Response2P(sid, role, x, s) =>
                 d.respx = d.respx + x
                 d.c12 match {
-                    case _: Session.LinNone => // !!! type case
-                    case c2: Session.LinSome[Fib2.C12] =>
+                    case c2: Session.LinSome[_] =>  // Fib2.C12
                         become(d, c2, cb)
+                    case _: Session.LinNone => throw new RuntimeException("missing frozen") // !!! type case
                 }
                 s.finish()
         }
@@ -324,9 +324,9 @@ class F2(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
             case Fib2.Response2P(sid, role, x, s) =>
                 d.respx = d.respx + x
                 d.c22 match {
-                    case _: Session.LinNone => // !!! type case
-                    case c2: Session.LinSome[Fib2.C22] =>
+                    case c2: Session.LinSome[_] =>  // Fib2.C22
                         become(d, c2, cb)
+                    case _: Session.LinNone => throw new RuntimeException("Missing frozen")// !!! type case
                 }
                 s.finish()
         }

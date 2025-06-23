@@ -185,10 +185,10 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                     if (this.readyNext) {  // i.e., local already full
                         // become
                         d.f3 match {
-                            case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
-                            case y: Session.LinSome[Proto2.F3] =>
+                            case y: Session.LinSome[_] =>  // Proto2.F3
                                 d.x = x
                                 become(d, y, f3LongBox)
+                            case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
                         }
                     } else {  // !readyNext
                         if (storeLocally()) {
@@ -212,11 +212,12 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
     }
 
     def isLocallyPrime(candidate: Long, localPrimes: Array[Long], startInc: Int, endExc: Int): Boolean = {
-        for (i <- startInc until endExc) {
+        /*for (i <- startInc until endExc) {
             val remainder = candidate % localPrimes(i)
             if (remainder == 0) return false
         }
-        true
+        true*/
+        !(startInc until endExc).exists(x => (candidate % localPrimes(x)) == 0)
     }
 
     def storeLocally(): Boolean = this.availableLocalPrimes < this.numMaxLocalPrimes
@@ -229,7 +230,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
             case Proto2.ReadyF(sid, role, s) =>
                 this.readyNext = true
 
-                var s3 = s.sendNewPrime(this.buff(0))
+                var s3 = s.sendNewPrime(this.buff.head)
                 for (i <- 1 until this.buff.length) {
                     s3 = s3.sendLongBox2(this.buff(i))
                 }
@@ -399,11 +400,12 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with P
     }
 
     def isLocallyPrime(candidate: Long, localPrimes: Array[Long], startInc: Int, endExc: Int): Boolean = {
-        for (i <- startInc until endExc) {
+        /*for (i <- startInc until endExc) {
             val remainder = candidate % localPrimes(i)
             if (remainder == 0) return false
         }
-        true
+        true*/
+        !(startInc until endExc).exists(x => (candidate % localPrimes(x)) == 0)
     }
 
     def storeLocally(): Boolean = this.availableLocalPrimes < this.numMaxLocalPrimes

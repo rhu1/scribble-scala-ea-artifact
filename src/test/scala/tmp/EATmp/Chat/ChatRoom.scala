@@ -70,10 +70,10 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
                 d.log += x
                 d.out.keySet.foreach(x =>  // toList for copy? or keySet already a copy?
                     d.out(x) match {
-                        case _: Session.LinNone => ()
-                        case y: Session.LinSome[ChatProto3.R31] =>
+                        case y: Session.LinSome[_] =>  // ChatProto3.R31
                             // !!! XXX cannot match on get because linear
                             Session.become(d, y, bc)
+                        case _: Session.LinNone => throw new RuntimeException("missing frozen")
                     }
                 )
                 s.suspend(d, r2_1)

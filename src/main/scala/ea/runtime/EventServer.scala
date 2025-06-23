@@ -201,7 +201,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                                 debugPrintln("Swallowing...")
                                 if (this.debug) { new Exception(e).printStackTrace() }
                                 val opt = a match {
-                                    case x: Session.Sid => Some(x)
+                                    case x: Session.Sid => Some(x)  // FIXME because attachment Java Object is a Scala tuple
                                     case _ => None
                                 }
                                 handleException(e, addr, opt)

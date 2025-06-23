@@ -168,11 +168,12 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
 
     //def locallyPrime(x: Int): Boolean = true
     def isLocallyPrime(candidate: Long, localPrimes: Array[Long], startInc: Int, endExc: Int): Boolean = {
-        for (i <- startInc until endExc) {
+        /*for (i <- startInc until endExc) {
             val remainder = candidate % localPrimes(i)
             if (remainder == 0) return false
         }
-        true
+        true*/
+        !(startInc until endExc).exists(x => (candidate % localPrimes(x)) == 0)
     }
 
     def f3LongBox(d: DataC, s: Sieve2.F3): Done.type = {
@@ -213,11 +214,11 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
 
     def exitMatch(d: DataC): Done.type = {
         d.f3 match {
+            case y: Session.LinSome[_] =>  // Sieve2.F3
+                become(d, y, exit)
             case _: Session.LinNone =>
                 println(s"aaaaaaaa: $hasNext $readyNext")
                 throw new RuntimeException("missing frozen")
-            case y: Session.LinSome[Sieve2.F3] =>
-                become(d, y, exit)
         }
     }
 
@@ -260,9 +261,13 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
                 if (isLocallyPrime(x, localPrimes, 0, availableLocalPrimes)) {
                     //if (hasNext) {  // HERE should be "next ready"
                     if (readyNext) { // HERE should be "next ready"
-                            println(s"F1 should pass ${x}...")
+                        println(s"F1 should pass ${x}...")
                         // become
                         d.f3 match {
+                            case y: Session.LinSome[_] =>  // Sieve2.F3
+                                println(s"F1 passing ${x}")
+                                d.x = x
+                                become(d, y, f3LongBox)
                             case _: Session.LinNone =>
                                 println(s"bbbbbbb ${x}")
                                 // HERE "resuspend" if no conn yet XXX
@@ -270,10 +275,6 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
                                 // - if !nextReady and !storeLocally -> if !spawned do spawn else buffer for register next -- in register send all buffered
                                 // !!! because of inline become? cf. async become would fire when registered -- !!! CHECKME registering multiple becomes?
                                 throw new RuntimeException("missing frozen")  // HERE add exception to other examples
-                            case y: Session.LinSome[Sieve2.F3] =>
-                                println(s"F1 passing ${x}")
-                                d.x = x
-                                become(d, y, f3LongBox)
                         }
                     } else {
                         if (storeLocally()) {
@@ -420,9 +421,9 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with S
 
                 if (readyNext) {
                     d.f3 match {
-                        case _: Session.LinNone => throw new RuntimeException("missing frozen")
-                        case y: Session.LinSome[Sieve2.F3] =>
+                        case y: Session.LinSome[_] =>  // Sieve2.F3
                             become(d, y, exit)
+                        case _: Session.LinNone => throw new RuntimeException("missing frozen")
                     }
                 } else {
                     this.pendingExit = true
@@ -446,10 +447,10 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with S
                         println(s"F passing ${x}")
                         // become
                         d.f3 match {
-                            case _: Session.LinNone => throw new RuntimeException("missing frozen")
-                            case y: Session.LinSome[Sieve2.F3] =>
+                            case y: Session.LinSome[_] =>  // Sieve2.F3
                                 d.x = x
                                 become(d, y, f3LongBox)
+                            case _: Session.LinNone => throw new RuntimeException("missing frozen")
                         }
                     } else {
                         if (storeLocally()) {
@@ -491,11 +492,12 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with S
 
     //def locallyPrime(x: Int): Boolean = true
     def isLocallyPrime(candidate: Long, localPrimes: Array[Long], startInc: Int, endExc: Int): Boolean = {
-        for (i <- startInc until endExc) {
+        /*for (i <- startInc until endExc) {
             val remainder = candidate % localPrimes(i)
             if (remainder == 0) return false
         }
-        true
+        true*/
+        !(startInc until endExc).exists(x => (candidate % localPrimes(x)) == 0)
     }
 
     def f3LongBox(d: DataD, s: Sieve2.F3): Done.type = {
