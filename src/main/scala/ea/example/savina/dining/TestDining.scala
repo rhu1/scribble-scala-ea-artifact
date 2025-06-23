@@ -31,6 +31,7 @@ object TestDining {
         val N = 5  // #philosophers
         val C = 3  // #courses
         val M = new M(N)
+        M.debug = true
         val A = new A(N)
 
         //M.debug = true
