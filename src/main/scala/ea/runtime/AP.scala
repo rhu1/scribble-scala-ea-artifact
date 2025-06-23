@@ -59,8 +59,8 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
             val iota = split(4)
             debugPrintln(s"Parsed: ${op} ${sid} ${rr} ${iota}")
 
-            def fff(): Unit = {
-                if (this.initSync.contains(sid)) {
+            /*def fff(): Unit = {
+                if (this.initSync.contains(sid)) {*/
                     this.initSync(sid) += rr
                     if (this.initSync(sid) == rs) {
                         this.initSync -= sid
@@ -74,11 +74,11 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
                             v._1.close()
                         }
                     }
-                } else {
+                /*} else {
                     enqueueForSelectLoop(fff)
                 }
             }
-            fff()
+            fff()*/
 
         } else if (op == "SERVER") {
             val proto1: Session.Global = split(1)
