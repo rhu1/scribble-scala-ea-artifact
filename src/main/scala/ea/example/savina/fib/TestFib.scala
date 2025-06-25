@@ -154,7 +154,7 @@ object Ftop extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
             d.c2 match {
                 case _: Session.LinNone =>
                 case c2: Session.LinSome[_] =>
-                    become(d, c2, cb)
+                    ibecome(d, c2, cb)
             }
             s.finish()
     }
@@ -229,7 +229,7 @@ class F1(val pid_F1: Pid, val port_F1: Port, val port_Proto2: Port)
             d.x_resp += x
             d.c12 match {
                 case c2: Session.LinSome[_] =>  // Proto2.C12
-                    become(d, c2, cb)
+                    ibecome(d, c2, cb)
                 case _: Session.LinNone => throw new RuntimeException("missing frozen")
             }
             s.finish()
@@ -304,7 +304,7 @@ class F2(val pid_F2: Pid, val port_F2: Port, val port_Proto2: Port)
             d.x_resp += x
             d.c22 match {
                 case _: Session.LinNone =>
-                case c2: Session.LinSome[_] => become(d, c2, cb)
+                case c2: Session.LinSome[_] => ibecome(d, c2, cb)
             }
             s.finish()
     }

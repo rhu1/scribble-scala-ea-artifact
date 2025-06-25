@@ -110,7 +110,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger
                 (sid: Session.Sid, role: Session.Role, a: Actor) => Pinger3(sid, role, a))
             d.pinger3 = a
             d.maker1 match {
-                case y: Session.LinSome[_] => Session.become(d, y, maker1)
+                case y: Session.LinSome[_] => Session.ibecome(d, y, maker1)
                 case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
             }
             done
@@ -133,7 +133,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger
             d.pinger3 = a
             d.maker1 match {
                 case _: Session.LinNone =>
-                case y: Session.LinSome[_] => Session.become(d, y, maker1)
+                case y: Session.LinSome[_] => Session.ibecome(d, y, maker1)
             }
             done
     }
@@ -183,7 +183,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger
         }
         // become Pinger
         d.pinger3 match {
-            case y: Session.LinSome[_] => Session.become(d, y, pinger3)
+            case y: Session.LinSome[_] => Session.ibecome(d, y, pinger3)
             case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
         }
         done

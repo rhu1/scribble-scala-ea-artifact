@@ -150,7 +150,7 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
         Thread.sleep(2000)
         this.out match {
             case y: Session.LinSome[_] =>  // ChatProto2.C21
-                Session.become(d, y, c2_1aux)
+                Session.ibecome(d, y, c2_1aux)
             case _: Session.LinNone => throw new RuntimeException("missing frozen")
   // cf. error handling?
         }

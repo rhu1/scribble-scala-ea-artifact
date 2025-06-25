@@ -170,7 +170,7 @@ object F extends Actor("MyF") with Fib1.ActorC with Fib2.ActorP {
                 d.respx = d.respx + x
                 d.c2 match {
                     case c2: Session.LinSome[_] =>  // Fib1.C2
-                        become(d, c2, cb)
+                        ibecome(d, c2, cb)
                     case _: Session.LinNone => throw new RuntimeException("missing frozen")  // !!! type case
                 }
                 s.finish()
@@ -248,7 +248,7 @@ class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
                 d.respx = d.respx + x
                 d.c12 match {
                     case c2: Session.LinSome[_] =>  // Fib2.C12
-                        become(d, c2, cb)
+                        ibecome(d, c2, cb)
                     case _: Session.LinNone => throw new RuntimeException("missing frozen") // !!! type case
                 }
                 s.finish()
@@ -325,7 +325,7 @@ class F2(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with 
                 d.respx = d.respx + x
                 d.c22 match {
                     case c2: Session.LinSome[_] =>  // Fib2.C22
-                        become(d, c2, cb)
+                        ibecome(d, c2, cb)
                     case _: Session.LinNone => throw new RuntimeException("Missing frozen")// !!! type case
                 }
                 s.finish()

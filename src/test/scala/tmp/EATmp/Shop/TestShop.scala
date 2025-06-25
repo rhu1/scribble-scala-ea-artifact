@@ -188,7 +188,7 @@ val port = 6666
                             // !!! assumes staff established -- Option vs. affine
                             d.ss1 match {
                                 case y: Session.LinSome[_] =>  // ShopProto2.SS1
-                                    Session.become(d, y, restockHandler)  // [[d.ss1]].become(d, ss1)
+                                    Session.ibecome(d, y, restockHandler)  // [[d.ss1]].become(d, ss1)
                                 case _: Session.LinNone => // !!! type case
                             }
                             sus.suspend(d, custReqHandler[S3])

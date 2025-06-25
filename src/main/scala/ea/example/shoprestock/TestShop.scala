@@ -200,7 +200,7 @@ object S extends Actor("Shop") with Proto1.ActorS with Proto2.ActorSS {
                     println(s"${nameToString()} Out of stock...")
                     d.oos = x
                     d.ss1 match {
-                        case y: Session.LinSome[_] => Session.become(d, y, restockHandler)  // Proto2.SS1
+                        case y: Session.LinSome[_] => Session.ibecome(d, y, restockHandler)  // Proto2.SS1
                         case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
                     }
                     sus.suspend(d, custReqHandler[Proto1.S3])

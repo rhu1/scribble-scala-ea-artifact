@@ -72,7 +72,7 @@ class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid
                     d.out(x) match {
                         case y: Session.LinSome[_] =>  // ChatProto3.R31
                             // !!! XXX cannot match on get because linear
-                            Session.become(d, y, bc)
+                            Session.ibecome(d, y, bc)
                         case _: Session.LinNone => throw new RuntimeException("missing frozen")
                     }
                 )

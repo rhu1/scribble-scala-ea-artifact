@@ -254,7 +254,7 @@ class Phil(val id: Int, pid_P: Pid, val port_P: Port, val port_Proto1: Port, val
     def s2_1(d: Data_Phil, s: Proto3.S21): Done.type = s match {
         case Proto3.SelfStartS2(sid, role, s) =>
             d.p5 match {
-                case y: Session.LinSome[_] => Session.become(d, y, p5Hungry)
+                case y: Session.LinSome[_] => Session.ibecome(d, y, p5Hungry)
                 case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
             }
             s.suspend(d, s2_1)
@@ -295,7 +295,7 @@ class Phil(val id: Int, pid_P: Pid, val port_P: Port, val port_Proto1: Port, val
             if (rem <= 0) {
                 val end = s5.sendExit()
                 d.s1_1 match {
-                    case y: Session.LinSome[_] => Session.become(d, y, s1Exit)
+                    case y: Session.LinSome[_] => Session.ibecome(d, y, s1Exit)
                     case _: Session.LinNone => throw new RuntimeException("Critical error s1Exit...")
                 }
                 finishAndClose(end)
@@ -307,7 +307,7 @@ class Phil(val id: Int, pid_P: Pid, val port_P: Port, val port_Proto1: Port, val
 
                 d.s1_1 match {
                     case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
-                    case y: Session.LinSome[_] => Session.become(d, y, s1Start)
+                    case y: Session.LinSome[_] => Session.ibecome(d, y, s1Start)
                 }
             }
     }

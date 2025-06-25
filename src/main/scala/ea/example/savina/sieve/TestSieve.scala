@@ -166,7 +166,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                 if (this.readyNext) {
                     d.f3 match {
                         case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
-                        case y: Session.LinSome[_] => become(d, y, sendExit2)
+                        case y: Session.LinSome[_] => ibecome(d, y, sendExit2)
                     }
                 } else {
                     this.pendingExit = true  // Do sendExit2 later
@@ -180,7 +180,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
                     d.f3 match {
                         case y: Session.LinSome[_] =>  // Proto2.F3
                             d.x = x
-                            become(d, y, f3LongBox)
+                            ibecome(d, y, f3LongBox)
                         case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
                     }
                 } else {  // !readyNext
@@ -340,7 +340,7 @@ class F(pid: Pid, port: Port, aport: Port) extends Actor(pid)
                 if (this.readyNext) {
                     d.f3 match {
                         case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
-                        case y: Session.LinSome[_] => become(d, y, sendExit2ToNext)
+                        case y: Session.LinSome[_] => ibecome(d, y, sendExit2ToNext)
                     }
                 } else {
                     this.pendingExit = true  // Do sendExit2ToNext later
@@ -356,7 +356,7 @@ class F(pid: Pid, port: Port, aport: Port) extends Actor(pid)
                         case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
                         case y: Session.LinSome[_] =>
                             d.x = x
-                            become(d, y, f3LongBox)
+                            ibecome(d, y, f3LongBox)
                     }
                 } else {
                     if (storeLocally()) {
@@ -425,7 +425,7 @@ class F(pid: Pid, port: Port, aport: Port) extends Actor(pid)
         case Proto2.Ack2F(sid, role, s) =>
             d.fn4 match {
                 case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
-                case y: Session.LinSome[_] => become(d, y, sendAck2ToPrev)
+                case y: Session.LinSome[_] => ibecome(d, y, sendAck2ToPrev)
             }
             finishAndClose(s)
     }
