@@ -11,7 +11,7 @@ import scala.collection.mutable
 
 object TestChatServer {
 
-    val PORT_Proto1 = ChatServer.PORT_Proto1
+    val PORT_Proto1: Port = ChatServer.PORT_Proto1
     val PORT_C1 = 7777
     val PORT_C2 = 7779
 
@@ -138,19 +138,19 @@ object ChatServer extends Actor("Server") with Registry {
     /* Close */
 
     override def afterClosed(): Unit =
-        println(s"Closing ${rs} ...")
+        println(s"Closing $rs ...")
         rs.foreach(_.enqueueClose())
         for i <- 1 to rs.length do println(s"Closed ${shutdownRooms.take()}.")
-        println(s"Closing ${p2s} ...")
+        println(s"Closing $p2s ...")
         p2s.foreach(_.close())
-        println(s"Closing ${p3s} ...")
+        println(s"Closing $p3s ...")
         p3s.foreach(_.close())
         TestChatServer.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: ${a} ${s}")
+        println(s"Channel exception: $a $s")
         cause.printStackTrace()
 }
 
