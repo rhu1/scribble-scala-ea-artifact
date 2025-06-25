@@ -12,9 +12,9 @@ import java.util.concurrent.atomic.AtomicInteger
 
 object TestFib {
 
-    val PORT_Proto1 = 8888
-    val PORT_M = 7777
-    val PORT_F = 6666
+    val PORT_Proto1: Port = 8888
+    val PORT_M: Port = 7777
+    val PORT_F: Port = 6666
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 

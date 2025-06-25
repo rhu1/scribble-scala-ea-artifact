@@ -12,10 +12,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 object TestDiningSelf {
 
-    val PORT_Proto1 = 8888
-    val PORT_Proto2 = 9999
-    val PORT_M = 7777
-    val PORT_A = 6666
+    val PORT_Proto1: Port = 8888
+    val PORT_Proto2: Port = 9999
+    val PORT_M: Port = 7777
+    val PORT_A: Port = 6666
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
