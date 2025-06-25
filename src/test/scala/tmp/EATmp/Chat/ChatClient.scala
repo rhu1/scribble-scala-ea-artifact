@@ -1,7 +1,7 @@
 package tmp.EATmp.Chat
 
 import ea.runtime.{Actor, Done, Net, Session, Util}
-import ea.runtime.Net.{Pid, Port}
+import ea.runtime.Net.{Pid_C, Port}
 import tmp.EATmp.{ChatProto1, ChatProto2, ChatProto3}
 
 import java.net.SocketAddress
@@ -67,7 +67,7 @@ class DataC extends Session.Data {
     var rAPPort: Int = -1
 }
 
-class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
+class ChatClient(pid: Net.Pid_C, port: Net.Port) extends Actor(pid) with Client {
 
     def spawn(): DataC = {
         val d = new DataC
@@ -99,7 +99,7 @@ class ChatClient(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Client {
         done
     }
 
-    def joinRoom(d: DataC, pid: Net.Pid, rAPPort: Net.Port): Unit = {
+    def joinRoom(d: DataC, pid: Net.Pid_C, rAPPort: Net.Port): Unit = {
         // !!! rename 3x registerC in API
         d.rAPPort = rAPPort
         registerC3(this.port, "localhost", d.rAPPort +1, d, c3_1suspend)  // ChatProto3.registerC

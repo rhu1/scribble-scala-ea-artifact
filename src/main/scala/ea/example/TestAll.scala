@@ -2,6 +2,7 @@ package ea.example
 
 import ea.example.chat.TestChatServer
 import ea.example.id.TestId
+import ea.example.lockid.TestLockId
 import ea.example.robot.TestRobot
 import ea.example.savina.diningself.TestDiningSelf
 import ea.example.savina.dining.TestDining
@@ -21,6 +22,12 @@ object TestAll {
         Thread.sleep(5000)
         id.S.enqueueClose()
         Thread.sleep(3000)  // Id has 2000ms sleep
+
+        println("\n---\nLockId")
+        Util.spawn(() => TestLockId.main(Array()))
+        Thread.sleep(5000)
+        lockid.S.enqueueClose()
+        Thread.sleep(3000)  // LockId has 2000ms sleep
 
         println("\n---\nShop")
         Util.spawn(() => TestShop.main(Array()))

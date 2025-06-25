@@ -205,7 +205,7 @@ class A(val numForks: Int) extends Actor("MyA") with Proto2.ActorA {
 
 case class Data_Phil() extends Session.Data
 
-class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}") with Proto2.ActorP with Proto1.ActorP1 {
+class Phil(val id: Int, pid: Net.Pid_C, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}") with Proto2.ActorP with Proto1.ActorP1 {
 
     def main(args: Array[String]): Unit = {
         spawn(this.port)

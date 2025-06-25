@@ -1,7 +1,7 @@
 package ea.example.chat
 
 import ea.example.chat.Chat.{Proto1, Proto2, Proto3}
-import ea.runtime.Net.{Pid, Port}
+import ea.runtime.Net.{Pid_C, Port}
 import ea.runtime.{Actor, Done, Session, Util}
 
 import java.net.SocketAddress
@@ -28,7 +28,7 @@ class Data_C extends Session.Data {
     var out: Session.LinOption[Proto2.C21] = Session.LinNone()
 }
 
-class ChatClient(pid_C: Pid, port_C: Port) extends Actor(pid_C) with Client {
+class ChatClient(pid_C: Pid_C, port_C: Port) extends Actor(pid_C) with Client {
 
     def spawn(): Data_C =
         val d = new Data_C
@@ -46,16 +46,16 @@ class ChatClient(pid_C: Pid, port_C: Port) extends Actor(pid_C) with Client {
     def c3(d: Data_C, s: Proto1.C3): Done.type =
         val (apPort, done) = s match {
             case Proto1.CreateRoomSuccessC(sid, role, x, s) =>
-                println(s"[${name}] create ${d.pid_Room} @ $x")
+                println(s"[$name] Create ${d.pid_Room} @ $x")
                 (x.toInt, s.sendBye("create").finish())
             case Proto1.RoomExistsC(sid, role, x, s) =>
-                println(s"[${name}] exists ${d.pid_Room} @ $x")
-                (x.toInt, s.sendBye("exists").finish())
+                println(s"[$name] Exists ${d.pid_Room} @ $x")
+                (x.toInt, s.sendBye("Exists").finish())
         }
         joinRoom(d, d.pid_Room, apPort)
         done
 
-    def joinRoom(d: Data_C, pid: Pid, port_Proto2: Port): Unit =
+    def joinRoom(d: Data_C, pid: Pid_C, port_Proto2: Port): Unit =
         d.port_Proto2 = port_Proto2
         d.port_Proto3 = port_Proto2 + 1  // Implicit...
         registerC3(this.port_C, "localhost", d.port_Proto3, d, c3_1suspend)
@@ -68,7 +68,7 @@ class ChatClient(pid_C: Pid, port_C: Port) extends Actor(pid_C) with Client {
 
     def c3_1(d: Data_C, s: Proto3.C31): Done.type = s match {
         case Proto3.IncomingChatMessageC3(sid, role, x, s) =>
-            println(s"[${name}] received: ${x}")
+            println(s"[$name] Received: $x")
             s.suspend(d, c3_1)
         case Proto3.ByeC3(sid, role, x, s) =>
             if (!d.out.isUsed) {
@@ -85,8 +85,8 @@ class ChatClient(pid_C: Pid, port_C: Port) extends Actor(pid_C) with Client {
         done
 
     def c2_1aux(d: Data_C, s: Proto2.C21): Done.type =
-        println(s"[${name}] sending... ${pid_C}")
-        val s1 = s.sendOutgoingChatMessage(s"${pid_C}")
+        println(s"[$name] Sending... $pid_C")
+        val s1 = s.sendOutgoingChatMessage(s"$pid_C")
         val (a, done) = Session.freeze(s,
             (sid: Session.Sid, role: Session.Role, a: Actor) => Proto2.C21(sid, role, a))
         d.out = a
@@ -112,7 +112,7 @@ class ChatClient(pid_C: Pid, port_C: Port) extends Actor(pid_C) with Client {
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: ${a} ${s}")
+        println(s"Channel exception: $a $s")
         cause.printStackTrace()
 
 }

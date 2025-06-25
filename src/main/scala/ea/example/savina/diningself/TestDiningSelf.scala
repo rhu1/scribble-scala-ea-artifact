@@ -214,7 +214,7 @@ case class Data_Phil() extends Session.Data {
     var p5: Session.LinOption[Proto2.P5] = Session.LinNone()
 }
 
-class Phil(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}")
+class Phil(val id: Int, pid: Net.Pid_C, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}")
     with Proto2.ActorP with Proto1.ActorP1 with Proto3.ActorS1 with Proto3.ActorS2 {
 
     private var ap_Proto3: Option[Proto3.Proto3] = None

@@ -192,7 +192,7 @@ case class Data_F1() extends Session.Data {
     var c12: LinOption[C12] = LinNone()
 }
 
-class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with ActorC1 with Proto2.ActorP {
+class F1(pid: Net.Pid_C, port: Net.Port, aport: Net.Port) extends Actor(pid) with ActorC1 with Proto2.ActorP {
 
     def main(args: Array[String]): Unit = {
         this.spawn(port)
@@ -268,7 +268,7 @@ case class Data_F2() extends Session.Data {
     var c22: LinOption[Proto2.C22] = LinNone()
 }
 
-class F2(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with Proto2.ActorC2 with Proto2.ActorP {
+class F2(pid: Net.Pid_C, port: Net.Port, aport: Net.Port) extends Actor(pid) with Proto2.ActorC2 with Proto2.ActorP {
 
     def main(args: Array[String]): Unit = {
         this.spawn(port)

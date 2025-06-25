@@ -1,7 +1,7 @@
 package ea.example.chat
 
 import ea.example.chat.Chat.{Proto1, Proto2, Proto3}
-import ea.runtime.Net.{Pid, Port}
+import ea.runtime.Net.{Pid_C, Port}
 import ea.runtime.{Actor, Done, Net, Session}
 
 import java.net.SocketAddress
@@ -73,8 +73,8 @@ object ChatServer extends Actor("Server") with Registry {
     val PORT_Proto1 = 9997
     val PORT_S = 8888
 
-    private val port: Net.Port = PORT_S
-    private val rooms: mutable.Map[Pid, Port] = collection.mutable.Map[Net.Pid, Net.Port]()
+    private val port: Port = PORT_S
+    private val rooms: mutable.Map[Pid_C, Port] = collection.mutable.Map[Pid_C, Port]()
 
     def spawn(): Unit =
         val d = new Data_S

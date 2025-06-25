@@ -11,7 +11,7 @@ trait DebugPrinter {
 object Net {  // Used by EventDrivenServer
     type Host = String
     type Port = Int
-    type Pid = String
+    type Pid_C = String
     //type Liota = (Net.Pid, Int)
     type Liota = String
 }

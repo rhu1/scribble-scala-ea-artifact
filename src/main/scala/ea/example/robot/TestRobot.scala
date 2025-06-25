@@ -110,7 +110,7 @@ class R(pid: String, val port: Net.Port) extends Actor(pid) with Proto1.ActorR {
 
 class DataD(var i: Int) extends Session.Data
 
-class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extends Actor(pid) with Proto1.ActorD {
+class D(pid: Net.Pid_C, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extends Actor(pid) with Proto1.ActorD {
 
     private var isBusy = false
 

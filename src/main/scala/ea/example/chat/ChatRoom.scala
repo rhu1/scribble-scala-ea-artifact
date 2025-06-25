@@ -1,7 +1,7 @@
 package ea.example.chat
 
 import ea.example.chat.Chat.{Proto2, Proto3}
-import ea.runtime.Net.{Pid, Port}
+import ea.runtime.Net.{Pid_C, Port}
 import ea.runtime.{Actor, Done, Session}
 
 import java.net.SocketAddress
@@ -10,7 +10,7 @@ class Data_R extends Session.Data {}
 
 trait Room extends Proto2.ActorR2 with Proto3.ActorR3
 
-class ChatRoom(pid_R: Pid, port_R: Port, port_Proto2: Port, port_Proto3: Port)
+class ChatRoom(pid_R: Pid_C, port_R: Port, port_Proto2: Port, port_Proto3: Port)
     extends Actor(pid_R) with Room {
 
     private val log: collection.mutable.ListBuffer[String] = collection.mutable.ListBuffer()
@@ -39,7 +39,7 @@ class ChatRoom(pid_R: Pid, port_R: Port, port_Proto2: Port, port_Proto3: Port)
 
     def r2_1(d: Data_R, s: Proto2.R21): Done.type = s match {
         case Proto2.OutgoingChatMessageR2(sid, role, x, s) =>
-            println(s"[$name] received: $x")
+            println(s"[$name] Received: $x")
             this.log += x
             this.out.keySet.foreach(x =>
                 this.out(x) match {
@@ -52,7 +52,7 @@ class ChatRoom(pid_R: Pid, port_R: Port, port_Proto2: Port, port_Proto3: Port)
 
     private def send(d: Data_R, s: Proto3.R31): Done.type =
         val msg = s"${this.log.last}"
-        println(s"[$name] sending... $msg")
+        println(s"[$name] Sending... $msg")
         val (a, done) = Session.freeze(
             s.sendIncomingChatMessage(msg),
             (sid: Session.Sid, role: Session.Role, a: Actor) => Proto3.R31(sid, role, a))
