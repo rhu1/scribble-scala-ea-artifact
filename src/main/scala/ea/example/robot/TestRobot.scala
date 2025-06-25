@@ -1,8 +1,8 @@
 package ea.example.robot
 
-import ea.runtime.{Actor, Done, Net, Session}
-import ea.runtime.Net.{Host, Pid_C, Port}
 import ea.example.robot.Robot.Proto1
+import ea.runtime.Net.{Host, Pid, Port}
+import ea.runtime.{Actor, Done, Session}
 
 import java.net.SocketAddress
 import java.util.concurrent.LinkedTransferQueue
@@ -10,8 +10,8 @@ import java.util.concurrent.LinkedTransferQueue
 object TestRobot {
 
     val PORT_Proto1: Port = W.PORT_Proto1
-    val PORT_D: Port = 6666
-    val PORT_R: Port = 7777
+    private val PORT_D: Port = 6666
+    private val PORT_R: Port = 7777
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
@@ -63,10 +63,10 @@ class R(pid_R: String, val port_R: Port) extends Actor(pid_R) with Proto1.ActorR
 
     def r3(d: Data_R, s: Proto1.R3): Done.type = s match {
         case Proto1.BusyR(sid, role, x: String, s) =>
-            println(s"${pid_R} Denied.")
+            println(s"$pid_R Denied.")
             finishAndClose(s)
         case Proto1.GoInR(sid, role, x: String, s) =>
-            println(s"${pid_R} Entered...")
+            println(s"$pid_R Entered...")
             s.sendInside("inside")
                 .suspend(d, r5)
     }
@@ -81,7 +81,7 @@ class R(pid_R: String, val port_R: Port) extends Actor(pid_R) with Proto1.ActorR
 
     def r8(d: Data_R, s: Proto1.R8): Done.type = s match {
         case Proto1.GoOutR(sid, role, x: String, s) =>
-            println(s"...${pid_R} Exited.")
+            println(s"...$pid_R Exited.")
             finishAndClose(s.sendOutside("outside"))
     }
 
@@ -99,7 +99,7 @@ class R(pid_R: String, val port_R: Port) extends Actor(pid_R) with Proto1.ActorR
 
 class Data_D extends Session.Data {}
 
-class D(pid_D: Pid_C, port_D: Port, host_Proto1: Host, port_Proto1: Port)
+class D(pid_D: Pid, port_D: Port, host_Proto1: Host, port_Proto1: Port)
     extends Actor(pid_D) with Proto1.ActorD {
 
     private var isBusy = false
@@ -119,7 +119,7 @@ class D(pid_D: Pid_C, port_D: Port, host_Proto1: Host, port_Proto1: Port)
                 s.sendBusy("busy").sendCancel("cancel").finish()
             } else {
                 this.isBusy = true
-                println(s"${pid_D} Busy.")
+                println(s"$pid_D Busy.")
                 val partNum = x
                 s.sendGoIn("enter").sendPrepare(partNum).suspend(d, d5)
             }
@@ -155,7 +155,7 @@ class D(pid_D: Pid_C, port_D: Port, host_Proto1: Host, port_Proto1: Port)
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: ${a} ${s}")
+        println(s"Channel exception: $a $s")
         cause.printStackTrace()
 }
 

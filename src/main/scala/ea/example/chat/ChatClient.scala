@@ -1,7 +1,7 @@
 package ea.example.chat
 
 import ea.example.chat.Chat.{Proto1, Proto2, Proto3}
-import ea.runtime.Net.{Pid_C, Port}
+import ea.runtime.Net.{Pid, Port}
 import ea.runtime.{Actor, Done, Session, Util}
 
 import java.net.SocketAddress
@@ -28,7 +28,7 @@ class Data_C extends Session.Data {
     var out: Session.LinOption[Proto2.C21] = Session.LinNone()
 }
 
-class ChatClient(pid_C: Pid_C, port_C: Port) extends Actor(pid_C) with Client {
+class ChatClient(pid_C: Pid, port_C: Port) extends Actor(pid_C) with Client {
 
     def spawn(): Data_C =
         val d = new Data_C
@@ -55,7 +55,7 @@ class ChatClient(pid_C: Pid_C, port_C: Port) extends Actor(pid_C) with Client {
         joinRoom(d, d.pid_Room, apPort)
         done
 
-    def joinRoom(d: Data_C, pid: Pid_C, port_Proto2: Port): Unit =
+    def joinRoom(d: Data_C, pid: Pid, port_Proto2: Port): Unit =
         d.port_Proto2 = port_Proto2
         d.port_Proto3 = port_Proto2 + 1  // Implicit...
         registerC3(this.port_C, "localhost", d.port_Proto3, d, c3_1suspend)

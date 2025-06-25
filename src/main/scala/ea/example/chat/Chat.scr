@@ -30,6 +30,7 @@ global protocol Proto1(role C, role S) {
     }
 }
 
+
 global protocol Proto2(role C2, role R2) {
     choice at C2 {
         OutgoingChatMessage(String) from C2 to R2;
@@ -38,6 +39,7 @@ global protocol Proto2(role C2, role R2) {
         LeaveRoom(String) from C2 to R2;
     }
 }
+
 
 global protocol Proto3(role R3, role C3){
     choice at R3 {

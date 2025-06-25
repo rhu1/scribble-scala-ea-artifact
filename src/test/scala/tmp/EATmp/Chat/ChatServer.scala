@@ -1,7 +1,7 @@
 package tmp.EATmp.Chat
 
 import ea.runtime.{Actor, Done, Net, Session}
-import ea.runtime.Net.{Pid_C, Port}
+import ea.runtime.Net.{Pid, Port}
 import tmp.EATmp.{ChatProto1, ChatProto2, ChatProto3}
 
 import java.net.SocketAddress
@@ -28,7 +28,7 @@ object TestChatServer {
 
 class DataS extends Session.Data {
     // Move to ChatServer (not per session data)
-    val rooms: mutable.Map[Pid_C, Port] = collection.mutable.Map[Net.Pid_C, Net.Port]()
+    val rooms: mutable.Map[Pid, Port] = collection.mutable.Map[Net.Pid, Net.Port]()
     var apCounter = 9886
     var rCounter = 6665
     def nextAPPort(): Int = {
@@ -43,7 +43,7 @@ class DataS extends Session.Data {
 
 trait Registry extends ChatProto1.ActorS
 
-class ChatServer(pid: Net.Pid_C, port: Net.Port) extends Actor(pid) with Registry {
+class ChatServer(pid: Net.Pid, port: Net.Port) extends Actor(pid) with Registry {
 
     def spawn(): Unit = {
         val d = new DataS

@@ -1,14 +1,9 @@
-// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
-// ./scribblec-ea.sh c  :/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/shoprestock/Shop.scr Proto1 -d test/scrib/out
-// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/shoprestock/Shop.scr Proto2 -d test/scrib/out
-
 module ea.example.shoprestock.Shop;
 
 
 data <scala> "String" from "" as String;
 
 
-//!!! -fair
 global protocol Proto1(role C, role S, role P)
 {
     ReqItems(String) from C to S;
@@ -42,6 +37,7 @@ aux global protocol Proto1Aux(role C, role S, role P)
         }
     }
 }
+
 
 global protocol Proto2(role SS, role SF) {
     choice at SS {

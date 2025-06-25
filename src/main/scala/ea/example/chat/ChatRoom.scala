@@ -1,7 +1,7 @@
 package ea.example.chat
 
 import ea.example.chat.Chat.{Proto2, Proto3}
-import ea.runtime.Net.{Pid_C, Port}
+import ea.runtime.Net.{Pid, Port}
 import ea.runtime.{Actor, Done, Session}
 
 import java.net.SocketAddress
@@ -10,7 +10,7 @@ class Data_R extends Session.Data {}
 
 trait Room extends Proto2.ActorR2 with Proto3.ActorR3
 
-class ChatRoom(pid_R: Pid_C, port_R: Port, port_Proto2: Port, port_Proto3: Port)
+class ChatRoom(pid_R: Pid, port_R: Port, port_Proto2: Port, port_Proto3: Port)
     extends Actor(pid_R) with Room {
 
     private val log: collection.mutable.ListBuffer[String] = collection.mutable.ListBuffer()

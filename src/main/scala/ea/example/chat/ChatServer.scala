@@ -1,8 +1,8 @@
 package ea.example.chat
 
 import ea.example.chat.Chat.{Proto1, Proto2, Proto3}
-import ea.runtime.Net.{Pid_C, Port}
-import ea.runtime.{Actor, Done, Net, Session}
+import ea.runtime.Net.{Pid, Port}
+import ea.runtime.{Actor, Done, Session}
 
 import java.net.SocketAddress
 import java.util.concurrent.LinkedTransferQueue
@@ -22,9 +22,7 @@ object TestChatServer {
         //ap1.debug = true
         ap1.spawn(ChatServer.PORT_Proto1)
 
-        /*val server = new ChatServer("Server", PORT_S)
         //server.debug = true
-        server.spawn()*/
         ChatServer.spawn()
 
         val c1 = new ChatClient("client1", PORT_C1)
@@ -74,7 +72,7 @@ object ChatServer extends Actor("Server") with Registry {
     val PORT_S = 8888
 
     private val port: Port = PORT_S
-    private val rooms: mutable.Map[Pid_C, Port] = collection.mutable.Map[Pid_C, Port]()
+    private val rooms: mutable.Map[Pid, Port] = collection.mutable.Map[Pid, Port]()
 
     def spawn(): Unit =
         val d = new Data_S

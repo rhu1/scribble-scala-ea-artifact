@@ -213,7 +213,7 @@ object Ports {
     }
 }*/
 
-class F(val id: Int, pid: Net.Pid_C, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}") with Phil2.ActorP with Phil1.ActorP1 {
+class F(val id: Int, pid: Net.Pid, val port: Net.Port, var rem: Int) extends Actor(s"P-${port}") with Phil2.ActorP with Phil1.ActorP1 {
 
     def main(args: Array[String]): Unit = {
         spawn(port)

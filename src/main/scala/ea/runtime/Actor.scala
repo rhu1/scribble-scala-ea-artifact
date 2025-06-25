@@ -59,7 +59,7 @@ import scala.util.control.Exception.catching
 
 //HERE -- add message queues, setHandler should dispatch if queue non-empty -- move dispatchInit back to APDONE
 
-abstract class Actor(val pid: Net.Pid_C) extends EventServer(s"Actor(${pid})") {
+abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor(${pid})") {
 
     class Foo //private()
 

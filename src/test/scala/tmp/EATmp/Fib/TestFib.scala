@@ -189,7 +189,7 @@ object F extends Actor("MyF") with Fib1.ActorC with Fib2.ActorP {
     }
 }
 
-class F1(pid: Net.Pid_C, port: Net.Port, aport: Net.Port) extends Actor(pid) with Fib2.ActorC1 with Fib2.ActorP {
+class F1(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with Fib2.ActorC1 with Fib2.ActorP {
 
     def main(args: Array[String]): Unit = {
         spawn(port)
@@ -267,7 +267,7 @@ class F1(pid: Net.Pid_C, port: Net.Port, aport: Net.Port) extends Actor(pid) wit
     }
 }
 
-class F2(pid: Net.Pid_C, port: Net.Port, aport: Net.Port) extends Actor(pid) with Fib2.ActorC2 with Fib2.ActorP {
+class F2(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with Fib2.ActorC2 with Fib2.ActorP {
 
     def main(args: Array[String]): Unit = {
         spawn(port)

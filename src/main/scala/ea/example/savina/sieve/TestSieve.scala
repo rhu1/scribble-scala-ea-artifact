@@ -309,7 +309,7 @@ case class DataD() extends Session.Data {
     var fn4: LinOption[Proto2.Fnext4] = LinNone()
 }
 
-class F(pid: Net.Pid_C, port: Net.Port, aport: Net.Port) extends Actor(pid) with Proto2.ActorF with Proto2.ActorFnext {
+class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with Proto2.ActorF with Proto2.ActorFnext {
 
     val numMaxLocalPrimes = 3
 

@@ -1,7 +1,7 @@
 package ea.example.lockid
 
 import ea.example.lockid.LockId.Proto1
-import ea.runtime.Net.{Pid_C, Port}
+import ea.runtime.Net.{Pid, Port}
 import ea.runtime.Session.*
 import ea.runtime.{Actor, Done, Session}
 
@@ -130,7 +130,7 @@ object Ports_C {
 
 case class Data_C() extends Session.Data
 
-class C(pid_C: Pid_C, port_C: Port, port_Proto1: Port) extends Actor(pid_C) with Proto1.ActorC {
+class C(pid_C: Pid, port_C: Port, port_Proto1: Port) extends Actor(pid_C) with Proto1.ActorC {
 
     def main(args: Array[String]): Unit =
         println(s"${nameToString()} Spawning $port_C ...")

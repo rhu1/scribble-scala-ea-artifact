@@ -360,7 +360,7 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
 
 /* ... */
 
-class F(pid: Net.Pid_C, port: Net.Port, aport: Net.Port) extends Actor(pid) with Sieve2.ActorF with Sieve2.ActorFnext {
+class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with Sieve2.ActorF with Sieve2.ActorFnext {
 
     val numMaxLocalPrimes = 3
     //var nextFilterActor: ActorRef = null

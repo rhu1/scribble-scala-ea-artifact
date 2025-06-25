@@ -33,7 +33,7 @@ class DataR extends Session.Data {
 // !!! @targetName manually added inside APIs to resolve ChatProto2/3.registerR clash
 trait Room extends ChatProto2.ActorR2 with ChatProto3.ActorR3
 
-class ChatRoom(pid: Net.Pid_C, port: Net.Port, apPort: Net.Port) extends Actor(pid) with Room {
+class ChatRoom(pid: Net.Pid, port: Net.Port, apPort: Net.Port) extends Actor(pid) with Room {
 
     val d = new DataR  // !!! thread through EventServer to keep local (so can provide to handleException)
 

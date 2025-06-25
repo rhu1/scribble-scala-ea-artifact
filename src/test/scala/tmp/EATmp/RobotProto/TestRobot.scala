@@ -90,7 +90,7 @@ class R(pid: String, val port: Net.Port) extends Actor(pid) with ActorR {
 
 class DataD(var i: Int) extends Session.Data
 
-class D(pid: Net.Pid_C, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extends Actor(pid) with ActorD {
+class D(pid: Net.Pid, port: Net.Port, apHost: Net.Host, apPort: Net.Port) extends Actor(pid) with ActorD {
 
     private var isBusy = false
 
