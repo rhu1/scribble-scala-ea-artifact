@@ -1,20 +1,14 @@
-// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
-// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/chat/Chat.scr Proto1 -d test/scrib/out
-// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/chat/Chat.scr Proto2 -d test/scrib/out
-// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/chat/Chat.scr Proto3 -d test/scrib/out
-
 module ea.example.chat.Chat;
 
 
 data <scala> "String" from "" as String;
 
 
-global protocol Proto1(role C, role S) {  // ChatServer(ClientThread, RoomRegistry)
+global protocol Proto1(role C, role S) {
     choice at C {
         LookupRoom(String) from C to S;  // RoomName
         choice at S {
-            RoomPID(String) from S to C;  // RoomName, PID => AP port
-            //C initiates ChatSession(C, new ChatRoom);  // !!!
+            RoomPID(String) from S to C;  // RoomName/PID => AP port
         } or {
             RoomNotFound(String) from S to C;  // RoomName
         }
@@ -32,11 +26,12 @@ global protocol Proto1(role C, role S) {  // ChatServer(ClientThread, RoomRegist
         RoomList(String) from S to C;  // List<RoomName>
         do Proto1(C, S);
     } or {
-        Bye(String) from C to S;  // !!!
+        Bye(String) from C to S;
     }
 }
 
-global protocol Proto2(role C2, role R2) {  // C, R
+
+global protocol Proto2(role C2, role R2) {
     choice at C2 {
         OutgoingChatMessage(String) from C2 to R2;
         do Proto2(C2, R2);
@@ -44,6 +39,7 @@ global protocol Proto2(role C2, role R2) {  // C, R
         LeaveRoom(String) from C2 to R2;
     }
 }
+
 
 global protocol Proto3(role R3, role C3){
     choice at R3 {

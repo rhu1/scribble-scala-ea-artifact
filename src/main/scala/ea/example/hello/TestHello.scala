@@ -1,66 +1,67 @@
 package ea.example.hello
 
-import ea.example.hello.Hello.Proto1.{A1, A2, ActorA, ActorB, B1, B1Suspend, Proto1, L1B, L2A}
+import ea.example.hello.Hello.Proto1.*
+import ea.runtime.Net.Port
 import ea.runtime.{Actor, Done, Session}
 
-import java.util.concurrent.LinkedTransferQueue
 import java.net.SocketAddress
+import java.util.concurrent.LinkedTransferQueue
 
 
 object TestHello {
 
-    val PORT_Proto1 = 8888
-    val PORT_A = 7777
-    val PORT_B = 6666
+    val PORT_Proto1: Port = A.PORT_Proto1
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
     def main(args: Array[String]): Unit = {
-        val ap_Proto1 = new Proto1
-        //ap_Proto1.debug = true
-        ap_Proto1.spawn(PORT_Proto1)
+        val proto1 = new Proto1
+        //proto1.debug = true
+        proto1.spawn(PORT_Proto1)
 
         Thread.sleep(500)
 
         //A.debug = true
         //B.debug = true
-        A.spawn();
+        A.spawn()
         B.spawn()
 
         for i <- 1 to 2 do println(s"Closed ${shutdown.take()}.")
-        println(s"Closing ${ap_Proto1.nameToString()}...")
-        ap_Proto1.close()
+        println(s"Closing ${proto1.nameToString()}...")
+        proto1.close()
     }
 
-    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
-        println(s"Channel exception: ${a} ${s}")
+        println(s"Channel exception: $a $s")
         cause.printStackTrace()
-    }
 }
 
 
 
 /* A */
 
-case class DataA() extends Session.Data
+case class Data_A() extends Session.Data {}
 
 object A extends Actor("MyA") with ActorA {
 
-    def spawn(): Unit = {
-        this.spawn(TestHello.PORT_A)
-        this.registerA(TestHello.PORT_A, "localhost", TestHello.PORT_Proto1, DataA(), a1)
-    }
+    val PORT_Proto1: Port = 8888
+    private val PORT_A: Port = 7777
 
-    def a1(d: DataA, s: A1): Done.type = s.sendL1().suspend(d, a2)
+    def spawn(): Unit =
+        this.spawn(PORT_A)
+        this.registerA(PORT_A, "localhost", PORT_Proto1, Data_A(), a1)
+
+    def a1(d: Data_A, s: A1): Done.type = s.sendL1().suspend(d, a2)
     
-    def a2(d: DataA, s: A2): Done.type =
-        s match {
-            case L2A(sid, role, x1, x2, x3, s) =>
-                println(s"${nameToString()} received L2: $x1, $x2, $x3")
-                this.finishAndClose(s)
+    def a2(d: Data_A, s: A2): Done.type = s match {
+        case L2A(sid, role, x1, x2, x3, s) =>
+            println(s"${nameToString()} received L2: $x1, $x2, $x3")
+            this.finishAndClose(s)
         }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestHello.shutdown.add(this.pid)
 
@@ -71,25 +72,27 @@ object A extends Actor("MyA") with ActorA {
 
 /* B */
 
-case class DataB() extends Session.Data
+case class Data_B() extends Session.Data {}
 
 object B extends Actor("MyB") with ActorB {
 
-    def spawn(): Unit = {
-        this.spawn(TestHello.PORT_B)
-        this.registerB(TestHello.PORT_B, "localhost", TestHello.PORT_Proto1, DataB(), b1Init)
-    }
+    private val PORT_B: Port = 6666
 
-    def b1Init(d: DataB, s: B1Suspend): Done.type = s.suspend(d, b1)
+    def spawn(): Unit =
+        this.spawn(PORT_B)
+        this.registerB(PORT_B, "localhost", TestHello.PORT_Proto1, Data_B(), b1Init)
 
-    def b1(d: DataB, s: B1): Done.type =
-        s match {
-            case L1B(sid, role, s) =>
-                println(s"${nameToString()} received L1")
-                this.finishAndClose(s.sendL2(42, "hello", true))
+    def b1Init(d: Data_B, s: B1Suspend): Done.type = s.suspend(d, b1)
+
+    def b1(d: Data_B, s: B1): Done.type = s match {
+        case L1B(sid, role, s) =>
+            println(s"${nameToString()} received L1")
+            this.finishAndClose(s.sendL2(42, "hello", true))
         }
 
-    override def afterClosed(): Unit = TestHello.shutdown.add(this.pid);
+    /* Close */
+
+    override def afterClosed(): Unit = TestHello.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         TestHello.handleException(cause, addr, sid)

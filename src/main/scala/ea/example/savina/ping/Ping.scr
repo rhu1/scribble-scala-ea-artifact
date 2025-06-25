@@ -1,10 +1,6 @@
-// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
-// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/ping/Ping.scr Proto1 -d test/scrib/out
-
 module ea.example.savina.ping.Ping;
 
 
-// `become` not needed -- split Pinger/PongReceiver into two actors (so "self comm" => "explicit comm")
 global protocol Proto1(role C, role Pinger, role Ponger, role PongReceiver) {
     Start() from C to Pinger;
     Ping0() from Pinger to Ponger;
