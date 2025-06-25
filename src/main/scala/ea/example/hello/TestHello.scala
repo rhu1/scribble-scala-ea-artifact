@@ -46,8 +46,8 @@ case class Data_A() extends Session.Data {}
 
 object A extends Actor("MyA") with ActorA {
 
-    val PORT_Proto1 = 8888
-    val PORT_A = 7777
+    val PORT_Proto1: Port = 8888
+    private val PORT_A: Port = 7777
 
     def spawn(): Unit =
         this.spawn(PORT_A)
@@ -60,6 +60,8 @@ object A extends Actor("MyA") with ActorA {
             println(s"${nameToString()} received L2: $x1, $x2, $x3")
             this.finishAndClose(s)
         }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestHello.shutdown.add(this.pid)
 
@@ -74,12 +76,11 @@ case class Data_B() extends Session.Data {}
 
 object B extends Actor("MyB") with ActorB {
 
-    val PORT_B = 6666
+    private val PORT_B: Port = 6666
 
-    def spawn(): Unit = {
+    def spawn(): Unit =
         this.spawn(PORT_B)
         this.registerB(PORT_B, "localhost", TestHello.PORT_Proto1, Data_B(), b1Init)
-    }
 
     def b1Init(d: Data_B, s: B1Suspend): Done.type = s.suspend(d, b1)
 
@@ -88,6 +89,8 @@ object B extends Actor("MyB") with ActorB {
             println(s"${nameToString()} received L1")
             this.finishAndClose(s.sendL2(42, "hello", true))
         }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestHello.shutdown.add(this.pid)
 

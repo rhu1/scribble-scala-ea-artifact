@@ -12,9 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 object TestFib {
 
-    val PORT_Proto1: Port = 8888
-    val PORT_M: Port = 7777
-    val PORT_F: Port = 6666
+    val PORT_Proto1: Port = M.PORT_Proto1
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
@@ -26,7 +24,7 @@ object TestFib {
 
         //M.debug = true
         //F.debug = true
-        F.main(Array())
+        Ftop.main(Array())
         M.main(Array())
 
         for i <- 1 to 2 do println(s"Closed ${shutdown.take()}.")  // M and F
@@ -50,9 +48,12 @@ case class Data_Main() extends Session.Data
 
 object M extends Actor("MyM") with Proto1.ActorP {
 
+    val PORT_Proto1: Port = 8888
+    private val PORT_M: Port = 7777
+
     def main(args: Array[String]): Unit =
-        this.spawn(TestFib.PORT_M)
-        this.registerP(TestFib.PORT_M, "localhost", TestFib.PORT_Proto1, Data_Main(), m1)
+        this.spawn(PORT_M)
+        this.registerP(PORT_M, "localhost", PORT_Proto1, Data_Main(), m1)
 
     def m1(d: Data_Main, s: Proto1.P1): Done.type =
         // 1 1 2 3 5 8 13 21 34 55
@@ -63,6 +64,8 @@ object M extends Actor("MyM") with Proto1.ActorP {
             println(s"${nameToString()} received Response: $x")
             finishAndClose(s)
     }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestFib.shutdown.add(this.pid)
 
@@ -97,11 +100,15 @@ case class Data_F() extends Session.Data {
     var c2: LinOption[Proto1.C2] = LinNone()
 }
 
-object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
+object Ftop extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
+
+    private val PORT_Ftop: Port = 6666
 
     def main(args: Array[String]): Unit =
-        this.spawn(TestFib.PORT_F)
-        this.registerC(TestFib.PORT_F, "localhost", TestFib.PORT_Proto1, Data_F(), c1Init)
+        this.spawn(PORT_Ftop)
+        this.registerC(PORT_Ftop, "localhost", TestFib.PORT_Proto1, Data_F(), c1Init)
+
+    /* Proto1 */
 
     def c1Init(d: Data_F, s: Proto1.C1Suspend): Done.type = s.suspend(d, c1)
 
@@ -118,7 +125,7 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
                 d.c2 = f
 
                 val port_Proto2_fresh = Ports.spawnFreshProto2AP()
-                registerP(TestFib.PORT_F, "localhost", port_Proto2_fresh, d, p1)
+                registerP(PORT_Ftop, "localhost", port_Proto2_fresh, d, p1)
 
                 val port_C1 = Ports.nextPort()
                 val port_C2 = Ports.nextPort()
@@ -128,6 +135,8 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
                 done
             }
     }
+
+    /* Proto2 */
 
     def p1(d: Data_F, s: Proto2.P1): Done.type =
         s.sendRequest1(d.n_req-1).sendRequest2(d.n_req-2).suspend(d, p3)
@@ -155,6 +164,8 @@ object F extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
         finishAndClose(s.sendResponse(d.x_resp))
         // *...or close here
 
+    /* Close */
+
     override def afterClosed(): Unit = TestFib.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
@@ -170,12 +181,14 @@ case class Data_F1() extends Session.Data {
     var c12: LinOption[Proto2.C12] = LinNone()
 }
 
-class F1(pid_F1: Pid, port_F1: Port, port_Proto2: Port)
+class F1(val pid_F1: Pid, val port_F1: Port, val port_Proto2: Port)
     extends Actor(pid_F1) with Proto2.ActorC1 with Proto2.ActorP {
 
     def main(args: Array[String]): Unit =
         this.spawn(port_F1)
         this.registerC1(port_F1, "localhost", port_Proto2, Data_F1(), c1Init)
+
+    /* Proto1 */
 
     def c1Init(d: Data_F1, s: Proto2.C11Suspend): Done.type = s.suspend(d, c1)
 
@@ -199,6 +212,8 @@ class F1(pid_F1: Pid, port_F1: Port, port_Proto2: Port)
                 done
             }
     }
+
+    /* Proto2 */
 
     def p1(d: Data_F1, s: Proto2.P1): Done.type =
         s.sendRequest1(d.n_req-1).sendRequest2(d.n_req-2).suspend(d, p3)
@@ -224,6 +239,8 @@ class F1(pid_F1: Pid, port_F1: Port, port_Proto2: Port)
         println(s"${nameToString()} sending F1(${d.n_req}): ${d.x_resp}")
         finishAndClose(s.sendResponse1(d.x_resp))
 
+    /* Close */
+
     //override def afterClosed(): Unit = TestFib.shutdown.add(this.pid);
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
@@ -239,12 +256,14 @@ case class Data_F2() extends Session.Data {
     var c22: LinOption[Proto2.C22] = LinNone()
 }
 
-class F2(pid_F2: Pid, port_F2: Port, port_Proto2: Port)
+class F2(val pid_F2: Pid, val port_F2: Port, val port_Proto2: Port)
     extends Actor(pid_F2) with Proto2.ActorC2 with Proto2.ActorP {
 
     def main(args: Array[String]): Unit =
         this.spawn(port_F2)
         this.registerC2(port_F2, "localhost", port_Proto2, Data_F2(), c2Init)
+
+    /* Proto2 */
 
     def c2Init(d: Data_F2, s: Proto2.C21Suspend): Done.type = s.suspend(d, c1)
 
@@ -269,6 +288,8 @@ class F2(pid_F2: Pid, port_F2: Port, port_Proto2: Port)
             }
     }
 
+    /* Proto1 */
+
     def p1(d: Data_F2, s: Proto2.P1): Done.type =
         s.sendRequest1(d.n_req-1).sendRequest2(d.n_req-2).suspend(d, p3)
 
@@ -292,6 +313,8 @@ class F2(pid_F2: Pid, port_F2: Port, port_Proto2: Port)
         println(s"${nameToString()} sending F2(${d.n_req}): ${d.x_resp}")
         finishAndClose(s.sendResponse2(d.x_resp))
         // *...or close here
+
+    /* Close */
 
     //override def afterClosed(): Unit = TestFib.shutdown.add(this.pid);
 

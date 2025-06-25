@@ -12,8 +12,8 @@ import scala.collection.mutable
 object TestChatServer {
 
     val PORT_Proto1: Port = ChatServer.PORT_Proto1
-    val PORT_C1 = 7777
-    val PORT_C2 = 7779
+    val PORT_C1: Port = 7777
+    val PORT_C2:Port = 7779
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
@@ -68,21 +68,20 @@ trait Registry extends Proto1.ActorS {}
 
 object ChatServer extends Actor("Server") with Registry {
 
-    val PORT_Proto1 = 9997
-    val PORT_S = 8888
+    val PORT_Proto1: Port = 9997
+    private val PORT_S: Port = 8888
 
-    private val port: Port = PORT_S
     private val rooms: mutable.Map[Pid, Port] = collection.mutable.Map[Pid, Port]()
 
     def spawn(): Unit =
         val d = new Data_S
-        spawn(this.port)
-        registerS(this.port, "localhost", PORT_Proto1, d, s1suspend)
+        spawn(PORT_S)
+        registerS(PORT_S, "localhost", PORT_Proto1, d, s1suspend)
 
     /* Proto1 */
 
     def s1suspend(d: Data_S, s: Proto1.S1Suspend): Done.type = {
-        registerS(this.port, "localhost", PORT_Proto1, d, s1suspend)
+        registerS(PORT_S, "localhost", PORT_Proto1, d, s1suspend)
         s.suspend(d, s1)
     }
 

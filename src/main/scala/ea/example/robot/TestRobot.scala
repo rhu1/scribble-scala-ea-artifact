@@ -10,8 +10,8 @@ import java.util.concurrent.LinkedTransferQueue
 object TestRobot {
 
     val PORT_Proto1: Port = W.PORT_Proto1
-    private val PORT_D: Port = 6666
-    private val PORT_R: Port = 7777
+    val PORT_D: Port = 6666
+    val PORT_R: Port = 7777
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
@@ -85,6 +85,8 @@ class R(pid_R: String, val port_R: Port) extends Actor(pid_R) with Proto1.ActorR
             finishAndClose(s.sendOutside("outside"))
     }
 
+    /* Close */
+
     //override def afterClosed(): Unit = TestRobot.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
@@ -150,6 +152,8 @@ class D(pid_D: Pid, port_D: Port, host_Proto1: Host, port_Proto1: Port)
         case Proto1.TableIdleD(sid, role, x: String, s) => s.finish()
     }
 
+    /* Close */
+
     override def afterClosed(): Unit = TestRobot.shutdown.add(this.pid_D)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
@@ -167,14 +171,14 @@ class Data_W extends Session.Data {}
 object W extends Actor("Warehouse") with Proto1.ActorW {
 
     val PORT_Proto1 = 8888
-    val port_W: Port = 5555
+    private val PORT_W: Port = 5555
 
     def spawn(): Unit =
-        spawn(this.port_W)
-        registerW(this.port_W, "localhost", PORT_Proto1, new Data_W(), w1Suspend)
+        spawn(this.PORT_W)
+        registerW(this.PORT_W, "localhost", PORT_Proto1, new Data_W(), w1Suspend)
 
     def w1Suspend(d: Data_W, s: Proto1.W1Suspend): Done.type =
-        registerW(this.port_W, "localhost", PORT_Proto1, d, w1Suspend)
+        registerW(this.PORT_W, "localhost", PORT_Proto1, d, w1Suspend)
         s.suspend(d, w1)
 
     def w1(d: Data_W, s: Proto1.W1): Done.type = s match {
@@ -198,6 +202,8 @@ object W extends Actor("Warehouse") with Proto1.ActorW {
             //finishAndClose(s.sendTableIdle("idle"))
             s.sendTableIdle("idle").finish()
     }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestRobot.shutdown.add(this.pid)
 

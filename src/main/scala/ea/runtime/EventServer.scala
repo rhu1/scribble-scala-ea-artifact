@@ -362,7 +362,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
 
     def debugToString(x: String): String = s"${nameToString()} ${x}"
 
-    def nameToString(): String = s"Actor(${name})"
+    def nameToString(): String = s"${this.name}"
     //def nameToString(): String = s"${this.name}:${port}"
 
 

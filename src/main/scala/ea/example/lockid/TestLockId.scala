@@ -78,7 +78,7 @@ object Data_S extends Session.Data  {
 object S extends Actor("MyS") with Proto1.ActorS {
 
     val PORT_Proto1 = 8888
-    val PORT_S = 7777
+    private val PORT_S = 7777
 
     def main(args: Array[String]): Unit =
         this.spawn(PORT_S)
@@ -110,6 +110,8 @@ object S extends Actor("MyS") with Proto1.ActorS {
                 d.unlock()
                 s.suspend(d, s1)
         }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestLockId.shutdown.add(this.pid)
 
@@ -169,6 +171,8 @@ class C(pid_C: Pid, port_C: Port, port_Proto1: Port) extends Actor(pid_C) with P
                 println(s"${nameToString()} Lock request unavailable.")
                 c1(d, s)
         }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestLockId.shutdown.add(this.pid)
 

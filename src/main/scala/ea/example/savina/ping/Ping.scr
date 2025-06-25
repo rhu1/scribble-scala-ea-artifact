@@ -1,7 +1,6 @@
 module ea.example.savina.ping.Ping;
 
 
-// `become` not needed -- split Pinger/PongReceiver into two actors (so "self comm" => "explicit comm")
 global protocol Proto1(role C, role Pinger, role Ponger, role PongReceiver) {
     Start() from C to Pinger;
     Ping0() from Pinger to Ponger;

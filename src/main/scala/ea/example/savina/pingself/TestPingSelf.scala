@@ -10,11 +10,8 @@ import java.util.concurrent.LinkedTransferQueue
 
 object TestPingSelf {
 
-    val PORT_Proto1: Port = 8888
-    val PORT_ProtoC: Port = 8889
-    val PORT_C: Port = 5555
-    val PORT_Pinger: Port = 6666
-    val PORT_Ponger: Port = 9999
+    val PORT_Proto1: Port = Ponger.PORT_Proto1
+    val PORT_ProtoC: Port = Pinger.PORT_ProtoC
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
@@ -57,15 +54,19 @@ case class Data_C() extends Session.Data
 
 object C extends Actor("MyC") with ActorC {
 
+    private val PORT_C: Port = 5555
+
     def spawn(): Unit =
-        this.spawn(TestPingSelf.PORT_C)
-        this.registerC(TestPingSelf.PORT_C, "localhost", TestPingSelf.PORT_ProtoC, Data_C(), c1)
+        this.spawn(PORT_C)
+        this.registerC(PORT_C, "localhost", TestPingSelf.PORT_ProtoC, Data_C(), c1)
 
     def c1(d: Data_C, s: C1): Done.type = s.sendStart().suspend(d, c2)
 
     def c2(d: Data_C, s: C2): Done.type = s match {
         case StopCC(sid, role, s) => finishAndClose(s)
     }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestPingSelf.shutdown.add(this.pid)
 
@@ -82,15 +83,20 @@ case class Data_Pinger(var rem: Int) extends Session.Data {
     var maker1: Session.LinOption[PingDecisionMaker1] = Session.LinNone()
 }
 
-object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionMaker with ActorPingDecisionReceiver {
+object Pinger extends Actor("MyPinger") with ActorPinger
+    with ActorPingDecisionMaker with ActorPingDecisionReceiver {
+
+    val PORT_ProtoC: Port = 8889
+    private val PORT_Pinger: Port = 6666
+
     val REPEATS = 2
 
     def spawn(): Unit =
-        this.spawn(TestPingSelf.PORT_Pinger)
+        this.spawn(PORT_Pinger)
         val d = Data_Pinger(REPEATS)
-        this.registerPingDecisionMaker(TestPingSelf.PORT_Pinger, "localhost",
+        this.registerPingDecisionMaker(PORT_Pinger, "localhost",
             TestPingSelf.PORT_ProtoC, d, maker1Init)
-        this.registerPingDecisionReceiver(TestPingSelf.PORT_Pinger, "localhost",
+        this.registerPingDecisionReceiver(PORT_Pinger, "localhost",
             TestPingSelf.PORT_ProtoC, d, pingDecisionReceiverInit)
 
     /* Proto1 */
@@ -160,7 +166,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionM
 
     def receiver1(d: Data_Pinger, s: PingDecisionReceiver1): Done.type = s match {
         case StartPingDecisionReceiver(sid, role, s) =>
-            registerPinger(TestPingSelf.PORT_Pinger, "localhost", TestPingSelf.PORT_Proto1, d, pinger1)
+            registerPinger(PORT_Pinger, "localhost", TestPingSelf.PORT_Proto1, d, pinger1)
             s.suspend(d, receiver2)
     }
 
@@ -184,7 +190,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger with ActorPingDecisionM
 
     private var pingerShutdown = 3;  // Pinger, PingDecisionReceiver, PingDecisionMaker
 
-    def pingerClose(): Unit =
+    private def pingerClose(): Unit =
         this.pingerShutdown -= 1
         if (this.pingerShutdown == 0) {
             this.enqueueClose()
@@ -205,10 +211,13 @@ case class Data_Ponger() extends Session.Data
 
 object Ponger extends Actor("MyPonger") with ActorPonger {
 
+    val PORT_Proto1: Port = 8888
+    private val PORT_Ponger: Port = 9999
+
     def spawn(): Unit =
-        this.spawn(TestPingSelf.PORT_Ponger)
-        this.registerPonger(TestPingSelf.PORT_Ponger, "localhost",
-            TestPingSelf.PORT_Proto1, Data_Ponger(), pongerInit)
+        this.spawn(PORT_Ponger)
+        this.registerPonger(PORT_Ponger, "localhost",
+            PORT_Proto1, Data_Ponger(), pongerInit)
 
     def pongerInit(d: Data_Ponger, s: Ponger1Suspend): Done.type = s.suspend(d, ponger1)
 

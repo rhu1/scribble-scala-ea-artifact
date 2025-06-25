@@ -30,14 +30,14 @@ object TestDining {
 
         val N = 5  // #philosophers
         val C = 3  // #courses
-        val M = new M(N)
+        val M = new M(N, PORT_M, PORT_Proto1)
         //M.debug = true
-        val A = new A(N)
+        val A = new A(N, PORT_A, PORT_Proto2)
 
         //M.debug = true
         //A.debug = true
         val Ps = Array.tabulate[Phil](N)(i => {
-            val loopActor = new Phil(i + 1, s"P-$i", 4444+i, C)
+            val loopActor = new Phil(i + 1, s"P-$i", 4444+i, PORT_Proto1, PORT_Proto2, C)
             loopActor.main(Array())
             loopActor
         })
@@ -63,15 +63,15 @@ object TestDining {
 
 case class Data_M() extends Session.Data
 
-class M(val N: Int) extends Actor("MyM") with Proto1.ActorM {
+class M(val N: Int, val port_M: Port, val port_Proto1: Port) extends Actor("MyM") with Proto1.ActorM {
 
     private var count = 0
 
     def main(args: Array[String]): Unit = {
-        this.spawn(TestDining.PORT_M)
+        this.spawn(this.port_M)
         // ...register and run for each P
         for (i <- Range.inclusive(1, N)) {
-            this.registerM(TestDining.PORT_M, "localhost", TestDining.PORT_Proto1, Data_M(), m1)
+            this.registerM(this.port_M, "localhost", this.port_Proto1, Data_M(), m1)
         }
     }
 
@@ -83,6 +83,8 @@ class M(val N: Int) extends Actor("MyM") with Proto1.ActorM {
         } else {
             s2.finish()
         }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
 
@@ -96,7 +98,7 @@ class M(val N: Int) extends Actor("MyM") with Proto1.ActorM {
 case class Data_A() extends Session.Data
 
 // numForks = numPhils = N
-class A(val numForks: Int) extends Actor("MyA") with Proto2.ActorA {
+class A(val numForks: Int, val port_A: Port, val port_Proto2: Port) extends Actor("MyA") with Proto2.ActorA {
 
     private val forks = Array.tabulate(numForks)(i => new AtomicBoolean(false))
 
@@ -104,9 +106,9 @@ class A(val numForks: Int) extends Actor("MyA") with Proto2.ActorA {
     private var numExitedPhilosophers = 0
 
     def main(args: Array[String]): Unit =
-        this.spawn(TestDining.PORT_A)
+        this.spawn(this.port_A)
         for (i <- Range.inclusive(1, numForks)) {
-            this.registerA(TestDining.PORT_A, "localhost", TestDining.PORT_Proto2, Data_A(), a1Init)
+            this.registerA(this.port_A, "localhost", this.port_Proto2, Data_A(), a1Init)
         }
 
     def a1Init(d: Data_A, s: Proto2.A1Suspend): Done.type = s.suspend(d, a1)
@@ -180,6 +182,8 @@ class A(val numForks: Int) extends Actor("MyA") with Proto2.ActorA {
             }
     }
 
+    /* Close */
+
     override def afterClosed(): Unit = TestDining.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
@@ -191,12 +195,13 @@ class A(val numForks: Int) extends Actor("MyA") with Proto2.ActorA {
 
 case class Data_Phil() extends Session.Data
 
-class Phil(val id: Int, pid_P: Pid, val port_P: Port, var rem: Int) extends Actor(s"P-$port_P") with Proto2.ActorP with Proto1.ActorP1 {
+class Phil(val id: Int, pid_P: Pid, val port_P: Port, val port_Proto1: Port, val port_Proto2: Port, var rem: Int)
+    extends Actor(s"P-$port_P") with Proto2.ActorP with Proto1.ActorP1 {
 
     def main(args: Array[String]): Unit =
         spawn(this.port_P)
         println(s"Phil ${this.id} spawned.")
-        registerP1(this.port_P, "localhost", TestDining.PORT_Proto1, Data_Phil(), p1_1Init)
+        registerP1(this.port_P, "localhost", this.port_Proto1, Data_Phil(), p1_1Init)
 
     /* Proto 1 */
 
@@ -207,7 +212,7 @@ class Phil(val id: Int, pid_P: Pid, val port_P: Port, var rem: Int) extends Acto
         s match {
             case Proto1.StartP1(sid, role, s) =>
                 println(s"Phil $id started.")
-                registerP(port_P, "localhost", TestDining.PORT_Proto2, d, p2_1)
+                registerP(this.port_P, "localhost", this.port_Proto2, d, p2_1)
                 s.finish()
         }
     }
@@ -234,6 +239,8 @@ class Phil(val id: Int, pid_P: Pid, val port_P: Port, var rem: Int) extends Acto
                 s5.sendHungryE(id).suspend(d, p2_2)
             }
     }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestDining.shutdown.add(this.pid_P)
 

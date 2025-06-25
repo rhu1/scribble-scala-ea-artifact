@@ -9,11 +9,7 @@ import java.util.concurrent.LinkedTransferQueue
 
 object TestPing {
 
-    val PORT_Proto1: Port = 8888
-    val PORT_C: Port = 5555
-    val PORT_Pinger: Port = 6666
-    val PORT_PongReceiver: Port = 7777
-    val PORT_Ponger: Port = 9999
+    val PORT_Proto1 = Ponger.PORT_Proto1
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
@@ -52,9 +48,11 @@ case class Data_C() extends Session.Data
 
 object C extends Actor("MyC") with ActorC {
 
+    private val PORT_C: Port = 5555
+
     def spawn(): Unit =
-        this.spawn(TestPing.PORT_C)
-        this.registerC(TestPing.PORT_C, "localhost", TestPing.PORT_Proto1, Data_C(), c1)
+        this.spawn(PORT_C)
+        this.registerC(PORT_C, "localhost", TestPing.PORT_Proto1, Data_C(), c1)
 
     def c1(d: Data_C, s: C1): Done.type = s.sendStart().suspend(d, c2)
 
@@ -77,9 +75,11 @@ case class Data_Pinger() extends Session.Data
 
 object Pinger extends Actor("MyPinger") with ActorPinger {
 
+    private val PORT_Pinger: Port = 6666
+    
     def spawn(): Unit =
-        this.spawn(TestPing.PORT_Pinger)
-        this.registerPinger(TestPing.PORT_Pinger, "localhost",
+        this.spawn(PORT_Pinger)
+        this.registerPinger(PORT_Pinger, "localhost",
             TestPing.PORT_Proto1, Data_Pinger(), pingerInit)
 
     def pingerInit(d: Data_Pinger, s: Pinger1Suspend): Done.type = s.suspend(d, pinger1)
@@ -115,11 +115,13 @@ case class Data_Receiver(var rem: Int) extends Session.Data
 
 object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
 
+    private val PORT_PongReceiver: Port = 7777
+    
     val REPEATS = 2
 
     def spawn(): Unit = {
-        this.spawn(TestPing.PORT_PongReceiver)
-        this.registerPongReceiver(TestPing.PORT_PongReceiver, "localhost",
+        this.spawn(PORT_PongReceiver)
+        this.registerPongReceiver(PORT_PongReceiver, "localhost",
             TestPing.PORT_Proto1, Data_Receiver(REPEATS), pongReceiverInit)
     }
 
@@ -178,9 +180,12 @@ case class Data_Ponger() extends Session.Data
 
 object Ponger extends Actor("MyPonger") with ActorPonger {
 
+    val PORT_Proto1: Port = 8888
+    private val PORT_Ponger: Port = 9999
+    
     def spawn(): Unit =
-        this.spawn(TestPing.PORT_Ponger)
-        registerPonger(TestPing.PORT_Ponger, "localhost",
+        this.spawn(PORT_Ponger)
+        registerPonger(PORT_Ponger, "localhost",
             TestPing.PORT_Proto1, Data_Ponger(), pongerInit)
 
     def pongerInit(d: Data_Ponger, s: Ponger1Suspend): Done.type = s.suspend(d, ponger1)

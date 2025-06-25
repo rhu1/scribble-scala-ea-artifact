@@ -39,12 +39,11 @@ object TestId {
         proto1.close()
     }
 
-    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         val a = addr.map(x => s"addr=${x.toString}").getOrElse("")
         val s = sid.map(x => s"sid=${x.toString}").getOrElse("")
         println(s"Channel exception: $a $s")
         cause.printStackTrace()
-    }
 }
 
 
@@ -60,7 +59,7 @@ object Data_S extends Session.Data  {
 object S extends Actor("MyS") with Proto1.ActorS {
 
     val PORT_Proto1 = 8888
-    val PORT_S = 7777
+    private val PORT_S = 7777
 
     def main(args: Array[String]): Unit =
         this.spawn(PORT_S)
@@ -75,6 +74,8 @@ object S extends Actor("MyS") with Proto1.ActorS {
             case Proto1.IDRequestS(sid, role, x, s) =>
                 s.sendIDResponse(d.get()).suspend(d, s1)
         }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestId.shutdown.add(this.pid)
 
@@ -112,6 +113,8 @@ class C(pid: Pid, port_C: Port, port_Proto1: Port) extends Actor(pid) with Proto
             Thread.sleep(1000)
             c1(d, s)
         }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestId.shutdown.add(this.pid)
 

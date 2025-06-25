@@ -4,15 +4,13 @@ module ea.example.shoprestock.Shop;
 data <scala> "String" from "" as String;
 
 
-global protocol Proto1(role C, role S, role P)
-{
+global protocol Proto1(role C, role S, role P) {
     ReqItems(String) from C to S;
     Items(String) from S to C;
     do Proto1Aux(C, S, P);
 }
 
-aux global protocol Proto1Aux(role C, role S, role P)
-{
+aux global protocol Proto1Aux(role C, role S, role P) {
     choice at C {
         GetItemInfo(String) from C to S;
         ItemInfo(String) from S to C;

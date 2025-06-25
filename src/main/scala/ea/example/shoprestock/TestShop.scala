@@ -84,6 +84,8 @@ object C extends Actor("Customer") with Proto1.ActorC {
         case Proto1.OKcC(sid, role, x, s) => c3(d, s)
         case Proto1.DeclinedcC(sid, role, x, s) => c3(d, s)
 
+    /* Close */
+
     override def afterClosed(): Unit = TestShop.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
@@ -112,7 +114,7 @@ object S extends Actor("Shop") with Proto1.ActorS with Proto2.ActorSS {
 
     val PORT_Proto2: Port = 9999
     val PORT_Proto1: Port = 8888
-    val PORT_S: Port = 6666
+    private val PORT_S: Port = 6666
 
     def spawn(): Unit = {
         val stock = collection.mutable.Map[String, (Int, Int)](
@@ -240,6 +242,8 @@ object SF extends Actor("Staff") with Proto2.ActorSF {
         case Proto2.RemoveItemSF(sid, role, x, s) => s.suspend(d, sf1)
     }
 
+    /* Close */
+
     override def afterClosed(): Unit = TestShop.shutdown.add(this.pid)
 
     override def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
@@ -273,6 +277,8 @@ object P extends Actor("PaymentProcessor") with Proto1.ActorP {
                 s.sendDeclined("()").suspend(d, p1)
             }
     }
+
+    /* Close */
 
     override def afterClosed(): Unit = TestShop.shutdown.add(this.pid)
 
