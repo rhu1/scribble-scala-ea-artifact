@@ -1,8 +1,3 @@
-// > mnt/c/Users/Raymond/winroot/home/eey335/code/java/intellij/git/github.com/rhu1/scribble-java-ea-artifact
-// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/diningself/DiningSelf.scr Proto1 -d test/scrib/out
-// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/diningself/DiningSelf.scr Proto2 -d test/scrib/out
-// ./scribblec-ea.sh c:/Users/Raymond/winroot/home/eey335/code/scala/intellij/git/github.com/rhu1/scribble-scala-ea-artifact/src/main/scala/ea/example/savina/diningself/DiningSelf.scr Proto3 -d test/scrib/out
-
 module ea.example.savina.diningself.DiningSelf;
 
 
@@ -21,7 +16,6 @@ global protocol Proto2(role P, role A) {
     do Proto2Aux(P, A);
 }
 
-// !!! skipping P self comm -- within same session so no become needed
 aux global protocol Proto2Aux(role P, role A) {
     choice at A {
         Denied() from A to P;
@@ -31,7 +25,6 @@ aux global protocol Proto2Aux(role P, role A) {
         Eat() from A to P;
         Done(Int) from P to A;  // Phil ID 1..N
         choice at P {
-            // !!! self send Start
             HungryE(Int) from P to A;  // Phil ID 1..N
             do Proto2Aux(P, A);
         } or {
@@ -40,10 +33,10 @@ aux global protocol Proto2Aux(role P, role A) {
     }
 }
 
-// Phil self-comm
+
 global protocol Proto3(role S1, role S2) {
     choice at S1 {
-        SelfStart() from S1 to S2;  // "Start" is bad name...
+        SelfStart() from S1 to S2;
         do Proto3(S1, S2);
     } or {
         SelfExit() from S1 to S2;
