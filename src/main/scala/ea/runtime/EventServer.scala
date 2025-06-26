@@ -15,15 +15,14 @@ abstract class EventServer(val name: String) extends DebugPrinter {
 
     private var port: Int = -1
 
-    def spawn(port: Int): Unit = {
+    def spawn(port: Int): Unit =
         this.port = port
         init()
         Util.spawn(() => runSelectLoop())
-    }
 
     // Pre: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
-    private[runtime] def init(): Unit = {
+    private[runtime] def init(): Unit =
         if (this.isSelecting) {  // Implies this.selector and this.serverSocket not None (via run)
             errPrintln("Already isSelecting, cannot init again")
             return
@@ -36,28 +35,25 @@ abstract class EventServer(val name: String) extends DebugPrinter {
         this.fSelector = Some(selector)
         this.fServerSocket = Some(serverSocket)
         debugPrintln(s"Server bound: $port")
-    }
 
     // Local address
     private val sockets: collection.mutable.Set[SocketAddress] = collection.mutable.Set()
 
     // ...only for registerForPeers from user clients (cf. events from event loop)
-    private[runtime] def registerWithSelector(c: SocketChannel, k: Int): Unit = {
+    private[runtime] def registerWithSelector(c: SocketChannel, k: Int): Unit =
         c.register(this.fSelector.get, k)
         this.sockets += c.getLocalAddress
-    }
 
     // TODO consider Data
     def afterClosed(): Unit = {}
 
-    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit = {
+    def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =
         cause.printStackTrace()
-    }
 
     // Post: !this.isSelecting, this.serverSocket == None, this.selector == None
     @throws[IOException]
     //private[runtime]
-    def enqueueClose(): Unit = {
+    def enqueueClose(): Unit =
         enqueueForSelectLoop(() => {
             debugPrintln("Stopping...")
             this.isSelecting = false
@@ -73,19 +69,17 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                 }
             }
         })
-    }
 
     private val runQueueLock = new Object()
     private val runQueue = new ListBuffer[() => Unit]()
 
-    private[runtime] def enqueueForSelectLoop(f: () => Unit): Unit = {
+    private[runtime] def enqueueForSelectLoop(f: () => Unit): Unit =
         this.runQueueLock.synchronized {
             this.runQueue += f
         }
         if (this.fSelector.isDefined) {
             this.fSelector.get.wakeup()
         }
-    }
 
     // Pre: !this.isSelecting, this.serverSocket == Some, this.selector == Some
     @throws[IOException]
@@ -168,15 +162,14 @@ abstract class EventServer(val name: String) extends DebugPrinter {
     }
 
     @throws[IOException]
-    private def handleAcceptAndRegister(selector: Selector, key: SelectionKey): Unit = {
+    private def handleAcceptAndRegister(selector: Selector, key: SelectionKey): Unit =
         val serverSocket = key.channel.asInstanceOf[ServerSocketChannel]
         val client = accept(serverSocket)
         client.register(selector, SelectionKey.OP_READ)
         debugPrintln(s"Registered accepted for READ: ${client.getRemoteAddress}")
-    }
 
     @throws[IOException]
-    private def handleReadAndRegister(selector: Selector, key: SelectionKey): Unit = {
+    private def handleReadAndRegister(selector: Selector, key: SelectionKey): Unit =
         val client = key.channel.asInstanceOf[SocketChannel]
         val opt = read(client)
         if (opt.isEmpty) {
@@ -186,13 +179,12 @@ abstract class EventServer(val name: String) extends DebugPrinter {
             val ms = opt
             ms.foreach(x => handleReadAndRegister(client, selector, x))
         }
-    }
 
     @throws[IOException]
     private[runtime] def handleReadAndRegister(client: SocketChannel, selector: Selector, msg: String): Unit
 
     @throws[IOException]
-    private[runtime] def connectAndRegister(host: Net.Host, port: Net.Port): Option[SocketChannel] = {
+    private[runtime] def connectAndRegister(host: Net.Host, port: Net.Port): Option[SocketChannel] =
         if (this.fSelector.isEmpty) {
             errPrintln("No selector")
             None
@@ -203,39 +195,33 @@ abstract class EventServer(val name: String) extends DebugPrinter {
             debugPrintln("Registered connected for READ: ${c.getRemoteAddress()}")
             Some(c)
         }
-    }
 
 
     /* Channel I/O -- independent of event loop */
 
     @throws[IOException]
-    private def connect(host: Net.Host, port: Net.Port): SocketChannel = {
+    private def connect(host: Net.Host, port: Net.Port): SocketChannel =
         debugPrintln(s"$name connecting... $port")
         val sSocket = SocketChannel.open(new InetSocketAddress(host, port))
         sSocket.configureBlocking(false)
         debugPrintln(s"Connected Actor: ${sSocket.getRemoteAddress}")
         sSocket
-    }
 
     @throws[IOException]
-    private def accept(/*selector: Selector, */serverSocket: ServerSocketChannel): SocketChannel = {
+    private def accept(serverSocket: ServerSocketChannel): SocketChannel =
         val client = serverSocket.accept()
         client.configureBlocking(false)
         debugPrintln(s"Accepted: ${client.getRemoteAddress}")
         client
-    }
 
     @throws[IOException]
-    private[runtime] def write(c: SocketChannel, pay: String): Unit = {
-
+    private[runtime] def write(c: SocketChannel, pay: String): Unit =
         val addr = c.getRemoteAddress
-
         val msg = s"$pay."
         val buffer = ByteBuffer.wrap(msg.getBytes)
         debugPrintln(s"Writing ${buffer.remaining()} bytes to $addr...")
         c.write(buffer)
         debugPrintln(s"...written to $addr: $msg")
-    }
 
     private type RemoteAddressString = String
     private val buffers: collection.mutable.Map[RemoteAddressString, ByteBuffer] = collection.mutable.Map()
