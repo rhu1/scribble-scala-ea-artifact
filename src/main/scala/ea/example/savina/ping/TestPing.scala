@@ -9,7 +9,7 @@ import java.util.concurrent.LinkedTransferQueue
 
 object TestPing {
 
-    val PORT_Proto1 = Ponger.PORT_Proto1
+    val PORT_Proto1: Port = Ponger.PORT_Proto1
 
     val shutdown: LinkedTransferQueue[String] = LinkedTransferQueue()
 
@@ -30,7 +30,7 @@ object TestPing {
         C.spawn()
 
         for i <- 1 to 4 do println(s"Closed ${shutdown.take()}.")
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
     }
 
@@ -86,13 +86,13 @@ object Pinger extends Actor("MyPinger") with ActorPinger {
 
     def pinger1(d: Data_Pinger, s: Pinger1): Done.type = s match {
         case StartPinger(sid, role, s) =>
-            println(s"${nameToString()} received Start")
+            println(s"$nameToString received Start")
             s.sendPing0().suspend(d, pinger3)
     }
 
     def pinger3(d: Data_Pinger, s: Pinger3): Done.type = s match {
         case PingCPinger(sid, role, s) =>
-            println(s"${nameToString()} received PingC")
+            println(s"$nameToString received PingC")
             s.sendPing().suspend(d, pinger3)
         case StopPinger(sid, role, s) =>
             val end = s.sendStop().sendStop()
@@ -135,7 +135,7 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
             ev.stop(this, d, s)
         } else {
             d.rem = d.rem - 1
-            println(s"${nameToString()} sending PingC, remaining ${d.rem}...")
+            println(s"$nameToString sending PingC, remaining ${d.rem}...")
             ev.sendPingC(this, d, s)
         }
     }
@@ -143,8 +143,8 @@ object PongReceiver extends Actor("MyPongReceiver") with ActorPongReceiver {
     sealed trait PongReceiver1or3[T] {
         def print(s: T): Unit =
             s match { // No longer exhaustively checked?
-                case Pong0PongReceiver(sid, role, s) => println(s"${nameToString()} received Pong0")
-                case PongPongReceiver(sid, role, s) => println(s"${nameToString()} received Pong")
+                case Pong0PongReceiver(sid, role, s) => println(s"$nameToString received Pong0")
+                case PongPongReceiver(sid, role, s) => println(s"$nameToString received Pong")
             }
 
         def sendPingC(a: Actor, d: Data_Receiver, s: T): Done.type =
@@ -197,10 +197,10 @@ object Ponger extends Actor("MyPonger") with ActorPonger {
 
     def ponger3(d: Data_Ponger, s: Ponger3): Done.type = s match {
         case PingPonger(sid, role, s) =>
-            println(s"${nameToString()} received Ping")
+            println(s"$nameToString received Ping")
             s.sendPong().suspend(d, ponger3)
         case StopPonger(sid, role, s) =>
-            println(s"${nameToString()} received Stop")
+            println(s"$nameToString received Stop")
             finishAndClose(s)
     }
 

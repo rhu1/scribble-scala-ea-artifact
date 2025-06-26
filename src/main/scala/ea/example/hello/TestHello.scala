@@ -27,7 +27,7 @@ object TestHello {
         B.spawn()
 
         for i <- 1 to 2 do println(s"Closed ${shutdown.take()}.")
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
     }
 
@@ -57,7 +57,7 @@ object A extends Actor("MyA") with ActorA {
     
     def a2(d: Data_A, s: A2): Done.type = s match {
         case L2A(sid, role, x1, x2, x3, s) =>
-            println(s"${nameToString()} received L2: $x1, $x2, $x3")
+            println(s"$nameToString received L2: $x1, $x2, $x3")
             this.finishAndClose(s)
         }
 
@@ -86,7 +86,7 @@ object B extends Actor("MyB") with ActorB {
 
     def b1(d: Data_B, s: B1): Done.type = s match {
         case L1B(sid, role, s) =>
-            println(s"${nameToString()} received L1")
+            println(s"$nameToString received L1")
             this.finishAndClose(s.sendL2(42, "hello", true))
         }
 

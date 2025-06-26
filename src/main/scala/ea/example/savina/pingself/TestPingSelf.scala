@@ -34,9 +34,9 @@ object TestPingSelf {
         C.spawn()
 
         for i <- 1 to 3 do println(s"Closed ${shutdown.take()}.")  // C, Pinger, Ponger
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
-        println(s"Closing ${protoC.nameToString()}...")
+        println(s"Closing ${protoC.nameToString}...")
         protoC.close()
     }
 
@@ -105,7 +105,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger
 
     def pinger2(d: Data_Pinger, s: Pinger2): Done.type = s match {
         case Pong0Pinger(sid, role, s) =>
-            println(s"${nameToString()} received Pong0")
+            println(s"$nameToString received Pong0")
             val (a, done) = Session.freeze(s,
                 (sid: Session.Sid, role: Session.Role, a: Actor) => Pinger3(sid, role, a))
             d.pinger3 = a
@@ -127,7 +127,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger
 
     def pinger4(d: Data_Pinger, s: Pinger4): Done.type = s match {
         case PongPinger(sid, role, s) =>
-            println(s"${nameToString()} received Pong")
+            println(s"$nameToString received Pong")
             val (a, done) = Session.freeze(s,
                 (sid: Session.Sid, role: Session.Role, a: Actor) => Pinger3(sid, role, a))
             d.pinger3 = a
@@ -153,7 +153,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger
             done
         } else {
             d.rem = d.rem - 1
-            println(s"${nameToString()}(PingDecisionMaker) sending Ping, remaining ${d.rem}...")
+            println(s"$nameToString(PingDecisionMaker) sending Ping, remaining ${d.rem}...")
             val s1 = s.sendPing()
             val (a, done) = Session.freeze(s1,
                 (sid: Session.Sid, role: Session.Role, a: Actor) => PingDecisionMaker1(sid, role, a))
@@ -173,7 +173,7 @@ object Pinger extends Actor("MyPinger") with ActorPinger
     def receiver2(d: Data_Pinger, s: PingDecisionReceiver2): Done.type =
         val done = s match {
             case PingPingDecisionReceiver(sid, role, s) =>
-                println(s"${nameToString()}(PingDecisionReceiver) received Ping")
+                println(s"$nameToString(PingDecisionReceiver) received Ping")
                 d.pingDecision = true
                 s.suspend(d, receiver2)
             case StopCPingDecisionReceiver(sid, role, s) =>
@@ -223,13 +223,13 @@ object Ponger extends Actor("MyPonger") with ActorPonger {
 
     def ponger1(d: Data_Ponger, s: Ponger1): Done.type = s match {
         case Ping0Ponger(sid, role, s) =>
-            println(s"${nameToString()} received Ping0")
+            println(s"$nameToString received Ping0")
             s.sendPong0().suspend(d, ponger3)
     }
 
     def ponger3(d: Data_Ponger, s: Ponger3): Done.type = s match {
         case PingPonger(sid, role, s) =>
-            println(s"${nameToString()} received Ping")
+            println(s"$nameToString received Ping")
             s.sendPong().suspend(d, ponger3)
         case StopPonger(sid, role, s) => finishAndClose(s)
     }

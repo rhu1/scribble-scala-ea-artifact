@@ -31,9 +31,9 @@ object TestShop {
 
         // Server protocol is non-terminating by default -- but actors can be closed from external
         for i <- 1 to 4 do println(s"Closed ${shutdown.take()}.")  // C, P, SF, S
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
-        println(s"Closing ${proto2.nameToString()}...")
+        println(s"Closing ${proto2.nameToString}...")
         proto2.close()
     }
 }
@@ -138,7 +138,7 @@ object S extends Actor("Shop") with Proto1.ActorS with Proto2.ActorSS {
         val ss1 = s.sendAddItem(s"add${d.oos}")
         val (p, x) = d.stock(d.oos)
         d.stock(d.oos) = (p, x + 2)
-        println(s"${nameToString()} Restocked ${d.oos}: ${x+2} @ $p")
+        println(s"$nameToString Restocked ${d.oos}: ${x+2} @ $p")
         val (a, done) = Session.freeze(ss1,
             (sid: Session.Sid, role: Session.Role, a: Actor) => Proto2.SS1(sid, role, a))
         d.ss1 = a
@@ -181,15 +181,14 @@ object S extends Actor("Shop") with Proto1.ActorS with Proto2.ActorSS {
         case s: Proto1.S3 => s match {
             case Proto1.GetItemInfoS(sid, role, x, s) =>
                 val info = d.stock(x)
-                nameToString()
                 val pay = s"${info._1}@${info._2}"
-                println(s"${nameToString()} GetItem: $x ${info._2} @ ${info._1}")
+                println(s"$nameToString GetItem: $x ${info._2} @ ${info._1}")
                 s.sendItemInfo(pay).suspend(d, custReqHandler[Proto1.S3])
             case Proto1.CheckoutS(sid, role, x, s) =>
-                println(s"${nameToString()} Checkout")
+                println(s"$nameToString Checkout")
                 if (d.inStock(x)) {
                     val pay = s"${d.cost(x, 1)}"
-                    println(s"${nameToString()} In stock 1x $x: total price $pay")
+                    println(s"$nameToString In stock 1x $x: total price $pay")
                     val (p, a) = d.stock(x)
                     d.stock(x) = (p, a - 1)
                     s.sendProcessing(s"Processing$x")
@@ -197,7 +196,7 @@ object S extends Actor("Shop") with Proto1.ActorS with Proto2.ActorSS {
                      .suspend(d, paymentResponseHandler)
                 } else {
                     val sus = s.sendOutOfStock(s"OutOfStock$x")
-                    println(s"${nameToString()} Out of stock...")
+                    println(s"$nameToString Out of stock...")
                     d.oos = x
                     d.ss1 match {
                         case y: Session.LinSome[_] => Session.ibecome(d, y, restockHandler)  // Proto2.SS1

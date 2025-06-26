@@ -41,7 +41,7 @@ object TestRobot {
         rs.foreach(_.enqueueClose())
 
         println(s"Closed ${shutdown.take()}.")  // D
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
     }
 }

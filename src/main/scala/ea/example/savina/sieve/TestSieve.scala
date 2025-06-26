@@ -34,7 +34,7 @@ object TestSieve {
         //F.main(Array())
 
         for i <- 1 to 3 do println(s"Closed ${shutdown.take()}.")  // M, G and F1
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
         println(s"Closing all Proto2 APs...")
         Ports.closeAllProto2APs()
@@ -157,7 +157,7 @@ object F1 extends Actor("MyF1") with Proto1.ActorF1 with Proto2.ActorF {
 
     def f1_2(d: Data_F1, s: Proto1.F12): Done.type = s match {
         case Proto1.ExitF1(sid, role, s) =>
-            println(s"${nameToString()} received Exit: ${(0 until availableLocalPrimes).foldLeft("")((x, y) => x + localPrimes(y).toString + " ")}")
+            println(s"$nameToString received Exit: ${(0 until availableLocalPrimes).foldLeft("")((x, y) => x + localPrimes(y).toString + " ")}")
             val end = s.sendAck()
             this.sentAck = true
             if (!this.hasNext) {
@@ -330,7 +330,7 @@ class F(pid: Pid, port: Port, aport: Port) extends Actor(pid)
         case Proto2.Exit2Fnext(sid, role, s) =>
             val msg = (0 until availableLocalPrimes).foldLeft("")(
                 (x, y) => x + localPrimes(y).toString + " ")
-            println(s"${nameToString()} received Exit: $msg")
+            println(s"$nameToString received Exit: $msg")
             if (!this.hasNext) {
                 finishAndClose(s.sendAck2())  // No next, send Ack2 to prev now
             } else {

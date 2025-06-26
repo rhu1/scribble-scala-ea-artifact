@@ -45,9 +45,9 @@ object TestDining {
         M.main(Array())
 
         for i <- 1 to 2 + N do println(s"Closed ${shutdown.take()}.")  // M, A, and N philosophers
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
-        println(s"Closing ${proto2.nameToString()}...")
+        println(s"Closing ${proto2.nameToString}...")
         proto2.close()
     }
 

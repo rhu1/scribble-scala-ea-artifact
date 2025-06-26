@@ -28,7 +28,7 @@ object TestFib {
         M.main(Array())
 
         for i <- 1 to 2 do println(s"Closed ${shutdown.take()}.")  // M and F
-        println(s"Closing ${ap_Proto1.nameToString()}...")
+        println(s"Closing ${ap_Proto1.nameToString}...")
         ap_Proto1.close()
         println(s"Closing all Proto2 APs...")
         Ports.closeAllProto2APs()
@@ -61,7 +61,7 @@ object M extends Actor("MyM") with Proto1.ActorP {
 
     def m2(d: Data_Main, s: Proto1.P2): Done.type = s match {
         case Proto1.ResponseP(sid, role, x, s) =>
-            println(s"${nameToString()} received Response: $x")
+            println(s"$nameToString received Response: $x")
             finishAndClose(s)
     }
 
@@ -160,7 +160,7 @@ object Ftop extends Actor("MyF") with Proto1.ActorC with Proto2.ActorP {
     }
 
     private def cb(d: Data_F, s: Proto1.C2): Done.type =
-        println(s"${nameToString()} sending F(${d.n_req}): ${d.x_resp}")
+        println(s"$nameToString sending F(${d.n_req}): ${d.x_resp}")
         finishAndClose(s.sendResponse(d.x_resp))
         // *...or close here
 
@@ -236,7 +236,7 @@ class F1(val pid_F1: Pid, val port_F1: Port, val port_Proto2: Port)
     }
 
     private def cb(d: Data_F1, s: Proto2.C12): Done.type =
-        println(s"${nameToString()} sending F1(${d.n_req}): ${d.x_resp}")
+        println(s"$nameToString sending F1(${d.n_req}): ${d.x_resp}")
         finishAndClose(s.sendResponse1(d.x_resp))
 
     /* Close */
@@ -310,7 +310,7 @@ class F2(val pid_F2: Pid, val port_F2: Port, val port_Proto2: Port)
     }
 
     private def cb(d: Data_F2, s: Proto2.C22): Done.type =
-        println(s"${nameToString()} sending F2(${d.n_req}): ${d.x_resp}")
+        println(s"$nameToString sending F2(${d.n_req}): ${d.x_resp}")
         finishAndClose(s.sendResponse2(d.x_resp))
         // *...or close here
 

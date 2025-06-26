@@ -43,9 +43,9 @@ object TestDiningSelf {
         M.main(Array())
 
         for i <- 1 to 2 + N do println(s"Closed ${shutdown.take()}.")  // M, A and N philosophers
-        println(s"Closing ${ap_Proto1.nameToString()}...")
+        println(s"Closing ${ap_Proto1.nameToString}...")
         ap_Proto1.close()
-        println(s"Closing ${ap_Proto2.nameToString()}...")
+        println(s"Closing ${ap_Proto2.nameToString}...")
         ap_Proto2.close()
 
     def handleException(cause: Throwable, addr: Option[SocketAddress], sid: Option[Session.Sid]): Unit =

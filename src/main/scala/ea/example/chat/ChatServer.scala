@@ -82,12 +82,12 @@ object ChatServer extends Actor("Server") with Registry {
     /* Close */
 
     override def afterClosed(): Unit =
-        println(s"Closing ${rs.map(_.nameToString()).mkString(", ")} ...")
+        println(s"Closing ${rs.map(_.nameToString).mkString(", ")} ...")
         rs.foreach(_.enqueueClose())
         for i <- 1 to rs.length do println(s"Closed ${shutdownRooms.take()}.")
-        println(s"Closing ${p2s.map(_.nameToString()).mkString(", ")} ...")
+        println(s"Closing ${p2s.map(_.nameToString).mkString(", ")} ...")
         p2s.foreach(_.close())
-        println(s"Closing ${p3s.map(_.nameToString()).mkString(", ")} ...")
+        println(s"Closing ${p3s.map(_.nameToString).mkString(", ")} ...")
         p3s.foreach(_.close())
         TestChatServer.shutdown.add(this.pid)
 
