@@ -35,7 +35,7 @@ object TestId {
         cs.foreach(_.enqueueClose())
 
         for i <- 1 to (cs.length + 1) do println(s"Closed ${shutdown.take()}.")  // S and Cs
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
     }
 
@@ -99,17 +99,17 @@ case class Data_C() extends Session.Data
 class C(pid: Pid, port_C: Port, port_Proto1: Port) extends Actor(pid) with Proto1.ActorC {
 
     def main(args: Array[String]): Unit = {
-        println(s"${nameToString()} Spawning $port_C ...")
+        println(s"$nameToString Spawning $port_C ...")
         this.spawn(port_C)
         this.registerC(port_C, "localhost", port_Proto1, Data_C(), c1)
     }
 
     def c1(d: Data_C, s: Proto1.C1): Done.type =
-        s.sendIDRequest(nameToString()).suspend(d, c2)
+        s.sendIDRequest(nameToString).suspend(d, c2)
 
     def c2(d: Data_C, s: Proto1.C2): Done.type = s match {
         case Proto1.IDResponseC(sid, role, x, s) =>
-            println(s"${nameToString()} Received Id: $x")
+            println(s"$nameToString Received Id: $x")
             Thread.sleep(1000)
             c1(d, s)
         }

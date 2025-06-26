@@ -215,7 +215,7 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
     def exitMatch(d: DataC): Done.type = {
         d.f3 match {
             case y: Session.LinSome[_] =>  // Sieve2.F3
-                become(d, y, exit)
+                ibecome(d, y, exit)
             case _: Session.LinNone =>
                 println(s"aaaaaaaa: $hasNext $readyNext")
                 throw new RuntimeException("missing frozen")
@@ -267,7 +267,7 @@ object F1 extends Actor("MyF1") with Sieve1.ActorF1 with Sieve2.ActorF {
                             case y: Session.LinSome[_] =>  // Sieve2.F3
                                 println(s"F1 passing ${x}")
                                 d.x = x
-                                become(d, y, f3LongBox)
+                                ibecome(d, y, f3LongBox)
                             case _: Session.LinNone =>
                                 println(s"bbbbbbb ${x}")
                                 // HERE "resuspend" if no conn yet XXX
@@ -422,7 +422,7 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with S
                 if (readyNext) {
                     d.f3 match {
                         case y: Session.LinSome[_] =>  // Sieve2.F3
-                            become(d, y, exit)
+                            ibecome(d, y, exit)
                         case _: Session.LinNone => throw new RuntimeException("missing frozen")
                     }
                 } else {
@@ -449,7 +449,7 @@ class F(pid: Net.Pid, port: Net.Port, aport: Net.Port) extends Actor(pid) with S
                         d.f3 match {
                             case y: Session.LinSome[_] =>  // Sieve2.F3
                                 d.x = x
-                                become(d, y, f3LongBox)
+                                ibecome(d, y, f3LongBox)
                             case _: Session.LinNone => throw new RuntimeException("missing frozen")
                         }
                     } else {

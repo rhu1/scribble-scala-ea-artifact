@@ -43,7 +43,7 @@ class ChatRoom(pid_R: Pid, port_R: Port, port_Proto2: Port, port_Proto3: Port)
             this.log += x
             this.out.keySet.foreach(x =>
                 this.out(x) match {
-                    case y: Session.LinSome[_] => Session.become(d, y, send)  // Proto3.R31
+                    case y: Session.LinSome[_] => Session.ibecome(d, y, send)  // Proto3.R31
                     case _: Session.LinNone => throw new RuntimeException("Missing frozen...")
                 })
             s.suspend(d, r2_1)

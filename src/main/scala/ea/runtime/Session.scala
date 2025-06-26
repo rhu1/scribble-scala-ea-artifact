@@ -104,7 +104,7 @@ object Session {
         (LinSome(f(s.sid, s.role, s.actor)), Done)  // main point: f copy is not done
     }
 
-    def become[D, S <: ActorState[Actor]]
+    def ibecome[D, S <: ActorState[Actor]]
     //def become[D, A <: Actor, S <: ActorState[A]]  // FIXME probably due to Actor hardcoded in places
             (d: D, a: LinSome[S], f: (D, S) => Done.type): Done.type = {
         //val hack = a.hackGet

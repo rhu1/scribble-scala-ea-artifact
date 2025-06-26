@@ -36,7 +36,7 @@ object TestLockId {
         cs.foreach(_.enqueueClose())
 
         for i <- 1 to (cs.length + 1) do println(s"Closed ${shutdown.take()}.")  // S and Cs
-        println(s"Closing ${proto1.nameToString()}...")
+        println(s"Closing ${proto1.nameToString}...")
         proto1.close()
     }
 
@@ -135,7 +135,7 @@ case class Data_C() extends Session.Data
 class C(pid_C: Pid, port_C: Port, port_Proto1: Port) extends Actor(pid_C) with Proto1.ActorC {
 
     def main(args: Array[String]): Unit =
-        println(s"${nameToString()} Spawning $port_C ...")
+        println(s"$nameToString Spawning $port_C ...")
         this.spawn(port_C)
         this.registerC(port_C, "localhost", port_Proto1, Data_C(), c1)
 
@@ -145,17 +145,17 @@ class C(pid_C: Pid, port_C: Port, port_Proto1: Port) extends Actor(pid_C) with P
         if (rand.nextInt(3) == 0) {
             s.sendLockRequest().suspend(d, c3)
         } else {
-            s.sendIDRequest(nameToString()).suspend(d, c2)
+            s.sendIDRequest(nameToString).suspend(d, c2)
         }
 
     def c2(d: Data_C, s: Proto1.C2): Done.type =
         s match {
             case Proto1.IDResponseC(sid, role, x, s) =>
-                println(s"${nameToString()} Received Id: $x")
+                println(s"$nameToString Received Id: $x")
                 Thread.sleep(1000)
                 c1(d, s)
             case Proto1.ReqUnavailableC(sid, role, s) =>
-                println(s"${nameToString()} ID request unavailable.")
+                println(s"$nameToString ID request unavailable.")
                 Thread.sleep(1000)
                 c1(d, s)
         }
@@ -163,12 +163,12 @@ class C(pid_C: Pid, port_C: Port, port_Proto1: Port) extends Actor(pid_C) with P
     def c3(d: Data_C, s: Proto1.C3): Done.type =
         s match {
             case Proto1.LockedC(sid, role, s) =>
-                println(s"${nameToString()} Locked...")
+                println(s"$nameToString Locked...")
                 Thread.sleep((rand.nextInt(3)+1)*1000)
-                println(s"${nameToString()} ...unlocking.")
+                println(s"$nameToString ...unlocking.")
                 c1(d, s.sendUnlock())
             case Proto1.LockUnavailableC(sid, role, s) =>
-                println(s"${nameToString()} Lock request unavailable.")
+                println(s"$nameToString Lock request unavailable.")
                 c1(d, s)
         }
 
