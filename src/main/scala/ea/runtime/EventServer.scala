@@ -115,7 +115,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                 selector.select()
 
                 debugPrintln(s"...selected: ${selector.selectedKeys.toString}")
-                // key has Sid attachment if any
+                // key has Sid attachment if any -- TODO: not done yet
                 val keys = selector.selectedKeys.iterator
                 while (keys.hasNext) {
 
@@ -143,7 +143,7 @@ abstract class EventServer(val name: String) extends DebugPrinter {
                                 debugPrintln("Swallowing...")
                                 if (this.debug) { new Exception(e).printStackTrace() }
                                 val opt = a match {
-                                    case x: Session.Sid => Some(x)  // FIXME because attachment Java Object is a Scala tuple
+                                    //case x: Session.Sid => Some(x)  // FIXME because attachment Java Object is a Scala tuple
                                     case _ => None
                                 }
                                 handleException(e, addr, opt)

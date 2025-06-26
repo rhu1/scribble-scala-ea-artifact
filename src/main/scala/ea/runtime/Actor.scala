@@ -43,9 +43,9 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor($pid)") {
 
     @throws[IOException]
     private def registerForPeers[D <: Session.Data]
-    (apHost: Net.Host, apPort: Net.Port, proto: Session.Global,
-     r: Session.Role, port: Net.Port, d: D, f: (D, Session.Sid) => Done.type,
-     peers: Set[Session.Role]): Unit = {
+            (apHost: Net.Host, apPort: Net.Port, proto: Session.Global,
+            r: Session.Role, port: Net.Port, d: D, f: (D, Session.Sid) => Done.type,
+            peers: Set[Session.Role]): Unit = {
 
         debugPrintln(s"Registering as $r server with AP: $proto")
         try {

@@ -55,12 +55,14 @@ object TestAll {
     }
 
     def testAsync(name: String, f: () => Unit, timeout: Int, close: () => Unit): Unit =
-        println(s"\n---\n$name\n---\n")
+        val tmp = "-" * name.length
+        println(s"\n$tmp\n$name\n$tmp\n")
         Util.spawn(f)
         Thread.sleep(timeout)
         close()
 
     def test(name: String, f: () => Unit): Unit =
-        println(s"\n---\n$name\n---\n")
+        val tmp = "-" * name.length
+        println(s"\n$tmp\n$name\n$tmp\n")
         f()
 }
