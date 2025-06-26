@@ -9,15 +9,11 @@ import scala.util.Try
 class AP(val proto: Session.Global, val rs: Set[Session.Role])
     extends EventServer(s"AP($proto)") {
 
-    private val chi = collection.mutable.ListBuffer[(
-        Session.Sid,
-        collection.mutable.Map[Session.Role, (SocketChannel, Net.Host, Net.Port, Net.Liota)]
-        )]()
+    private val chi = collection.mutable.ListBuffer[(Session.Sid,
+        collection.mutable.Map[Session.Role, (SocketChannel, Net.Host, Net.Port, Net.Liota)])]()
 
-    private val chi2 = collection.mutable.ListBuffer[(
-        Session.Sid,
-            collection.mutable.Map[Session.Role, (SocketChannel, Net.Host, Net.Port, Net.Liota)]
-        )]()
+    private val chi2 = collection.mutable.ListBuffer[(Session.Sid,
+            collection.mutable.Map[Session.Role, (SocketChannel, Net.Host, Net.Port, Net.Liota)])]()
 
     private val initSync = collection.mutable.Map[Session.Sid, collection.mutable.Set[Session.Role]]()
 
@@ -66,6 +62,7 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
 
                 this.chi2 += this.chi(get._2)
                 this.chi.remove(get._2)
+
             } else {
                 val find2 = this.chi.zipWithIndex.find(x => !x._1._2.contains(r))
                 if (find2.isDefined) {
@@ -77,6 +74,7 @@ class AP(val proto: Session.Global, val rs: Set[Session.Role])
 
                     reqs += (r -> (socket, host, port, iota))
                     debugPrintln(s"Added to chi($sid): $reqs")
+
                 } else {
                     val index = nextIndex()
                     val sid: Session.Sid = (proto, index)
