@@ -9,8 +9,6 @@ import scala.concurrent.Promise
 import scala.util.control.Exception.catching
 
 
-/* ... */
-
 abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor($pid)") {
 
     // For sessions (not APs)
@@ -24,9 +22,11 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor($pid)") {
     private val initHandlers = collection.mutable.Map[(Session.Sid, Session.Role), () => Done.type]()
     private val handlers = collection.mutable.Map[(Session.Sid, Session.Role, Session.Role), (String, String) => Done.type]()  // (Op, Pay)
 
-    private val initSync = collection.mutable.Map[Net.Liota, 
+    private val initSync = collection.mutable.Map[Net.Liota,
         (collection.mutable.Map[Session.Role, Promise[Unit]], SocketChannel, Session.Sid => Done.type)]()
 
+
+    /* Apigen target */
 
     def enqueueRegisterForPeers
             [D <: Session.Data, S <: ActorState[Actor]]
@@ -41,30 +41,67 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor($pid)") {
         enqueueForSelectLoop(() => registerForPeers(apHost, apPort, proto, r, port, d, g, peers))
     }
 
+    @throws[IOException]
+    private def registerForPeers[D <: Session.Data]
+    (apHost: Net.Host, apPort: Net.Port, proto: Session.Global,
+     r: Session.Role, port: Net.Port, d: D, f: (D, Session.Sid) => Done.type,
+     peers: Set[Session.Role]): Unit = {
+
+        debugPrintln(s"Registering as $r server with AP: $proto")
+        try {
+            val apSocket = connectAndRegister(apHost, apPort).get
+
+            debugPrintln(s"Connected AP: ${apSocket.getLocalAddress} -> ${apSocket.getRemoteAddress}")
+
+            val i = nextIota()
+            val ps: List[Session.Role] = peers.toList
+            val ff = (x: Session.Sid) => f.apply(d, x)
+            this.initSync(i) = (collection.mutable.Map(ps.map(x => x -> Promise[Unit]()): _*), apSocket, ff)
+
+            val msg = s"SERVER_${proto}_${r}_localhost_${port}_$i"
+            write(apSocket, msg)
+
+            debugPrintln(s"Registered AP connected for READ: ${apSocket.getRemoteAddress}")
+
+        } catch {
+            case e: IOException => e.printStackTrace()
+        }
+    }
+
+    // self = dst, peer = src
+    def setHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, f: (String, String) => Done.type): Unit = {
+        if (this.queues.contains((sid, self, peer))) {
+            val q = this.queues((sid, self, peer))
+            if (q.nonEmpty) {
+                val h = q.head
+                this.queues((sid, self, peer)) = q.tail
+                val split = h.split("__")
+
+                val op = split(0)
+                val pay = if (split.length > 1) { split(1) } else { "" }  // cf. msg.substring in handleReadAndRegister (e.g. SEND case) works for empty pay
+                f(op, pay)
+
+            } else {
+                this.handlers((sid, self, peer)) = f
+            }
+        } else {
+            this.handlers((sid, self, peer)) = f
+        }
+    }
+
+    @throws[IOException]
+    def sendMessage(sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: String): Unit = {
+        debugPrintln(s"Sockets: $sockets")
+        debugPrintln(s"Sending message to $sid[$dst]: $op($pay)")
+        write(this.sockets((sid, dst)), s"SEND_${sid._1}_${sid._2}_${src}_${dst}_${op}_$pay")
+    }
+
     // cf. s.finish -- without close, e.g., ChatServer handling multiple clients
     @throws[IOException]
     def finishAndClose[A <: Actor](s: Session.End[A]): Done.type =
         val done = s.finish()
         this.enqueueClose()
         done
-
-    @throws[IOException]
-    def doConnect(rr: Session.Role, host: Net.Host, port: Net.Port,
-                  sid: Session.Sid, rrr: Session.Role, selector: Selector, iota: Net.Liota): Unit = {
-        val opt = connectAndRegister(host, port)
-        if (opt.isEmpty) {
-            errPrintln(s"Couldn't connect to Actor $sid[$rrr]@$host:$port")
-            return
-        }
-
-        val sSocket: SocketChannel = opt.get
-        val msg1 = s"CONNECT_${sid._1}_${sid._2}_${rr}_${rrr}_$iota"
-        write(sSocket, msg1)
-
-        sSocket.register(selector, SelectionKey.OP_READ, sid)
-        this.sockets((sid, rrr)) = sSocket
-        debugPrintln(s"Connected Actor: sid=$sid, host=$host:$port")
-    }
 
     // r is self -- need to close conns to all _other_ r's
     def end(sid: Session.Sid, r: Session.Role): Unit = {
@@ -92,12 +129,8 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor($pid)") {
         debugPrintln(s"...ended: $sid[$r]")
     }
 
-    @throws[IOException]
-    def sendMessage(sid: Session.Sid, src: Session.Role, dst: Session.Role, op: String, pay: String): Unit = {
-        debugPrintln(s"Sockets: $sockets")
-        debugPrintln(s"Sending message to $sid[$dst]: $op($pay)")
-        write(this.sockets((sid, dst)), s"SEND_${sid._1}_${sid._2}_${src}_${dst}_${op}_$pay")
-    }
+
+    /* Event loop */
 
     @throws[IOException]
     override def handleReadAndRegister(client: SocketChannel, selector: Selector, msg: String): Unit = {
@@ -212,94 +245,8 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor($pid)") {
         }
     }
 
-    private val iotadones = collection.mutable.Set[(Session.Sid, Net.Liota)]()
-
-    // Can be "concurrently" tried from APCLIENT and CONNECT if active not established in between
-    def checkIotaDone(client: SocketChannel, iota: Net.Liota, sid: Session.Sid, rr: Session.Role, selector: Selector): Unit = {
-
-        if (iotadones.contains((sid, iota))) {
-            return
-        }
-
-        if (this.active.contains(sid) && this.active(sid).contains(rr)) {
-            return
-        }
-
-        if (this.initSync(iota)._1.forall(x => x._2.isCompleted)) {  // initSync roles map intialised with all peers as keys
-            iotadones += ((sid, iota))
-            val pay = s"IOTADONE_${sid._1}_${sid._2}_${rr}_$iota"
-            write(client, pay)
-        }
-    }
-
-    @throws[IOException]
-    def registerForPeers[D <: Session.Data]
-            (apHost: Net.Host, apPort: Net.Port, proto: Session.Global,
-             r: Session.Role, port: Net.Port, d: D, f: (D, Session.Sid) => Done.type,
-             peers: Set[Session.Role]): Unit = {
-
-        debugPrintln(s"Registering as $r server with AP: $proto")
-        try {
-            val apSocket = connectAndRegister(apHost, apPort).get
-
-            debugPrintln(s"Connected AP: ${apSocket.getLocalAddress} -> ${apSocket.getRemoteAddress}")
-
-            val i = nextIota()
-            val ps: List[Session.Role] = peers.toList
-            val ff = (x: Session.Sid) => f.apply(d, x)
-            this.initSync(i) = (collection.mutable.Map(ps.map(x => x -> Promise[Unit]()): _*), apSocket, ff)
-
-            val msg = s"SERVER_${proto}_${r}_localhost_${port}_$i"
-            write(apSocket, msg)
-
-            debugPrintln(s"Registered AP connected for READ: ${apSocket.getRemoteAddress}")
-
-        } catch {
-            case e: IOException => e.printStackTrace()
-        }
-    }
-
-
-    private var iCounter = 0
-
-    def nextIota(): Net.Liota = {
-        this.iCounter += 1
-        s"${this.pid}:${this.iCounter}"
-    }
-
-    def setInitHandler(sid: Session.Sid, r: Session.Role, f: () => Done.type): Unit = {
-        this.initHandlers((sid, r)) = f
-    }
-
-    def dispatchInitHandler(sid: Session.Sid, r: Session.Role): Unit = {
-        val f = this.initHandlers(sid, r)
-        this.initHandlers -= ((sid, r))
-        f()
-    }
-
     // self = dst, peer = src
-    def setHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, f: (String, String) => Done.type): Unit = {
-            if (this.queues.contains((sid, self, peer))) {
-            val q = this.queues((sid, self, peer))
-            if (q.nonEmpty) {
-                val h = q.head
-                this.queues((sid, self, peer)) = q.tail
-                val split = h.split("__")
-
-                val op = split(0)
-                val pay = if (split.length > 1) { split(1) } else { "" }  // cf. msg.substring in handleReadAndRegister (e.g. SEND case) works for empty pay
-                f(op, pay)
-
-            } else {
-                this.handlers((sid, self, peer)) = f
-            }
-        } else {
-            this.handlers((sid, self, peer)) = f
-        }
-    }
-
-    // self = dst, peer = src
-    def dispatchHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, op: String, pay: String): Unit = {
+    private def dispatchHandler(sid: Session.Sid, self: Session.Role, peer: Session.Role, op: String, pay: String): Unit = {
         if (!this.handlers.contains((sid, self, peer))) {
             val q = this.queues.getOrElseUpdate((sid, self, peer), ListBuffer())
             q += s"${op}__$pay"
@@ -311,20 +258,80 @@ abstract class Actor(val pid: Net.Pid) extends EventServer(s"Actor($pid)") {
         }
     }
 
-    def serialize[T, D <: EADeserializer[T]](x: EASerializable[T, D]): String = x.toString
+
+    /* Initiation */
+
+    @throws[IOException]
+    private def doConnect(rr: Session.Role, host: Net.Host, port: Net.Port,
+                          sid: Session.Sid, rrr: Session.Role, selector: Selector, iota: Net.Liota): Unit = {
+        val opt = connectAndRegister(host, port)
+        if (opt.isEmpty) {
+            errPrintln(s"Couldn't connect to Actor $sid[$rrr]@$host:$port")
+            return
+        }
+
+        val sSocket: SocketChannel = opt.get
+        val msg1 = s"CONNECT_${sid._1}_${sid._2}_${rr}_${rrr}_$iota"
+        write(sSocket, msg1)
+
+        sSocket.register(selector, SelectionKey.OP_READ, sid)
+        this.sockets((sid, rrr)) = sSocket
+        debugPrintln(s"Connected Actor: sid=$sid, host=$host:$port")
+    }
+
+    private var iCounter = 0
+    private def nextIota(): Net.Liota = {
+        this.iCounter += 1
+        s"${this.pid}:${this.iCounter}"
+    }
+
+    private val iotadones = collection.mutable.Set[(Session.Sid, Net.Liota)]()
+
+    // Can be "concurrently" tried from APCLIENT and CONNECT if active not established in between
+    private def checkIotaDone(client: SocketChannel, iota: Net.Liota, sid: Session.Sid, rr: Session.Role, selector: Selector): Unit = {
+
+        if (this.iotadones.contains((sid, iota))) {
+            return
+        }
+
+        if (this.active.contains(sid) && this.active(sid).contains(rr)) {
+            return
+        }
+
+        if (this.initSync(iota)._1.forall(x => x._2.isCompleted)) {  // initSync roles map intialised with all peers as keys
+            this.iotadones += ((sid, iota))
+            val pay = s"IOTADONE_${sid._1}_${sid._2}_${rr}_$iota"
+            write(client, pay)
+        }
+    }
+
+    private def setInitHandler(sid: Session.Sid, r: Session.Role, f: () => Done.type): Unit = {
+        this.initHandlers((sid, r)) = f
+    }
+
+    private def dispatchInitHandler(sid: Session.Sid, r: Session.Role): Unit = {
+        val f = this.initHandlers(sid, r)
+        this.initHandlers -= ((sid, r))
+        f()
+    }
+
+
+    /* Serialization */
+
+    //def serialize[T, D <: EADeserializer[T]](x: EASerializable[T, D]): String = x.toString
     def serializeString(x: String): String = x
     def serializeInt(x: Int): String = x.toString
     def serializeBoolean(x: Boolean): String = x.toString
-    def deserialize[T, D <: EADeserializer[T]](x: String, d: D): T = d.deserialize(x)
+    //def deserialize[T, D <: EADeserializer[T]](x: String, d: D): T = d.deserialize(x)
     def deserializeString(x: String): String = x
     def deserializeInt(x: String): Int = x.toInt
     def deserializeBoolean(x: String): Boolean = x.toBoolean
 }
 
-trait EASerializable[T, D <: EADeserializer[T]] {
+/*trait EASerializable[T, D <: EADeserializer[T]] {
     def serialize(): String
 }
 
 trait EADeserializer[T] {
     def deserialize(bs: String): T
-}
+}*/
